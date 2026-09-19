@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f1f8" />
+  <meta name="description" content="The Sith Order Holocron Network — the Hall of Records." />
+  <title>TSO — Holocron Network</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23f4f1f8' d='M0 0h64v64H0z'/%3E%3Cpath fill='none' stroke='%23c8102e' stroke-width='4' stroke-linejoin='round' d='M32 8 56 50H8L32 8Zm0 0v42M8 50l24-16 24 16'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <!-- app:start -->
+  <div class="scene" aria-hidden="true">
+    <div class="scene-glow scene-glow-crimson"></div>
+    <div class="scene-glow scene-glow-amber"></div>
+    <div class="scene-glow scene-glow-violet"></div>
+    <div class="scene-prism"></div>
+    <div class="scene-floor"></div>
+    <canvas class="scene-motes" id="motes"></canvas>
+    <div class="scene-aura"></div>
+    <div class="scene-grain"></div>
+  </div>
+  <div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
+
+  <header class="site-header" id="siteHeader">
+    <a class="brand" href="/" data-link aria-label="Holocron Network home">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 57 51H7L32 7Z"/><path d="M32 7v44M7 51l25-17 25 17"/><circle cx="32" cy="38" r="3"/></svg>
+      <span><strong>TSO</strong><small>Holocron Network</small></span>
+    </a>
+    <button class="menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false"><i></i><i></i></button>
+    <nav class="main-nav" id="mainNav" aria-label="Primary navigation">
+      <a class="nav-link" href="/" data-link>Network</a>
+      <div class="sections-menu">
+        <button class="nav-link" id="sectionsButton" aria-expanded="false">Vaults <span aria-hidden="true">▾</span></button>
+        <div class="sections-popover" id="sectionsPopover"></div>
+      </div>
+      <button class="search-trigger" id="searchTrigger" aria-label="Search all holocrons">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <span>Search the network</span><kbd>/</kbd>
+      </button>
+      <span class="sync-pill" id="syncPill" data-state="connecting" title="Content is pulled from the Order's Trello board"><i></i><span id="syncStatus">Connecting</span></span>
+    </nav>
+  </header>
+
+  <div class="search-panel" id="searchPanel" role="dialog" aria-modal="true" aria-label="Search the network" hidden>
+    <div class="search-frame">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="globalSearch" type="search" placeholder="Search every holocron…" autocomplete="off" aria-label="Search every holocron" />
+        <button id="closeSearch" aria-label="Close search">Esc</button>
+      </div>
+      <div class="search-results" id="searchResults"></div>
+      <div class="search-hints"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> open</span><span id="searchCount"></span></div>
+    </div>
+  </div>
+
+  <main id="app" tabindex="-1">
+    <div class="loading-page">
+      <svg class="loader-sigil" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 7 57 51H7L32 7Z"/><path d="M32 7v44M7 51l25-17 25 17"/></svg>
+      <p>Opening the network</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <span>TSO · Holocron Network · Hall of Records</span>
+    <span id="footerSync">Source: Trello</span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="lightbox" id="lightbox" hidden><button id="lightboxClose" aria-label="Close image">Close</button><img id="lightboxImage" alt="" /><p id="lightboxCaption"></p></div>
+  <!-- app:end -->
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
