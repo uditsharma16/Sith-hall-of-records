@@ -228,43 +228,112 @@ function navigate(href) {
 }
 const isRecordPath = (path) => path.split("/").filter(Boolean)[0] === "record";
 
-/* A Star Wars-flavoured way to arrive at a holocron, hand-timed as three beats
- * rather than one automatic cross-fade — this is deliberately not built on the
- * View Transition API, so each beat can be paced on its own:
- *   1. warp-stop  — the current page holds for a moment, dimmed and pulled back,
+/* A Star Wars-flavoured way to arrive at a holocron, hand-timed in beats rather
+ * than one automatic cross-fade:
+ *   1. warp-stop — the current page holds for a moment, dimmed and pulled back,
  *      like the engines cutting out before the jump.
- *   2. .burst     — a starburst rushes in from a point until it fully covers the
- *      screen. The actual page swap happens right as it reaches full cover, so
- *      it's completely hidden — no visible cut, no cross-fade artifact.
- *   3. .clear     — the burst peels back apart, revealing the record that has
- *      already opened underneath.
- * Durations here match the animation-duration values in styles.css exactly. */
-const HYPERSPACE_STOP_MS = 380;
-const HYPERSPACE_BURST_MS = 300;
-const HYPERSPACE_SWAP_BUFFER_MS = 70;
-const HYPERSPACE_CLEAR_MS = 520;
+ *   2. A canvas-drawn field of streaks accelerates outward from a point into a
+ *      bright converging tunnel. The actual page swap happens the instant it
+ *      reaches full coverage, hidden completely behind it.
+ *   3. The streaks keep rushing outward while fading out, and the arriving
+ *      record expands from that same point to fill the screen (#app.warp-arrive)
+ *      underneath them — "bursting out of hyperspace" into the record. */
+const hyperspaceCanvas = byId("hyperspace");
+const hctx = hyperspaceCanvas.getContext("2d");
+let hyperspaceField = [];
+function resizeHyperspaceCanvas() {
+  const ratio = Math.min(devicePixelRatio || 1, 2);
+  hyperspaceCanvas.width = innerWidth * ratio;
+  hyperspaceCanvas.height = innerHeight * ratio;
+  hctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+resizeHyperspaceCanvas();
+window.addEventListener("resize", resizeHyperspaceCanvas, { passive: true });
+
+const makeHyperspaceField = (count) => Array.from({ length: count }, () => ({
+  angle: Math.random() * Math.PI * 2,
+  dist: Math.random() * 60,          // staggered starting offsets, so streaks don't all begin in lockstep
+  speed: .55 + Math.random() * 1.65, // per-streak speed multiplier
+  width: 1 + Math.random() * 1.8,
+  hue: Math.random(),                // picks the streak's tint below
+}));
+/* motion (0 → ~1.6) drives position/length and can run past 1 to keep streaks
+ * flying outward during the recede phase; alpha (1 → 0) fades everything out
+ * independently, so the tunnel can keep moving while it dissolves. */
+function drawHyperspaceFrame(motion, alpha) {
+  const w = innerWidth, h = innerHeight, cx = w / 2, cy = h / 2;
+  const maxR = Math.hypot(cx, cy);
+  hctx.clearRect(0, 0, w, h);
+  const bgAlpha = Math.min(1, motion / .3) * alpha;
+  if (bgAlpha > .003) { hctx.fillStyle = `rgba(11,10,15,${bgAlpha.toFixed(3)})`; hctx.fillRect(0, 0, w, h); }
+  if (motion < .02 || alpha <= 0) return;
+  const accel = Math.pow(Math.min(motion, 1.6), 1.5);
+  const accelClamped = Math.min(accel, 1);
+  hctx.lineCap = "round";
+  for (const p of hyperspaceField) {
+    const dist = accel * maxR * .5 + p.dist * (.3 + accel * 2.2) * p.speed;
+    const len = 6 + accel * maxR * 1.2 * p.speed * (.5 + p.hue * .4);
+    const cos = Math.cos(p.angle), sin = Math.sin(p.angle);
+    const streakAlpha = Math.min(1, accel * 1.8) * (.55 + p.hue * .45) * alpha;
+    if (streakAlpha <= .01) continue;
+    const color = p.hue > .82 ? "201,162,77" : p.hue > .5 ? "155,89,182" : "225,222,245";
+    hctx.strokeStyle = `rgba(${color},${streakAlpha.toFixed(3)})`;
+    hctx.lineWidth = p.width * (.5 + accelClamped * 1.4);
+    hctx.beginPath();
+    hctx.moveTo(cx + cos * dist, cy + sin * dist);
+    hctx.lineTo(cx + cos * (dist + len), cy + sin * (dist + len));
+    hctx.stroke();
+  }
+  const coreAlpha = Math.min(1, accel * 1.5) * alpha;
+  if (coreAlpha > .01) {
+    const coreR = 4 + accelClamped * 60;
+    const core = hctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+    core.addColorStop(0, `rgba(255,255,255,${coreAlpha.toFixed(3)})`);
+    core.addColorStop(1, "rgba(255,255,255,0)");
+    hctx.fillStyle = core;
+    hctx.beginPath(); hctx.arc(cx, cy, coreR, 0, Math.PI * 2); hctx.fill();
+  }
+}
+
+const HYPERSPACE_STOP_MS = 340;
+const HYPERSPACE_JUMP_MS = 620;   // streak field accelerating to full screen coverage
+const HYPERSPACE_ARRIVE_MS = 560; // streaks receding + #app expanding, together
 let warping = false;
 function hyperspaceJump(swap) {
   warping = true;
   const html = document.documentElement;
-  const overlay = byId("hyperspace");
-  overlay.classList.remove("burst", "clear");
+  hyperspaceField = makeHyperspaceField(Math.round(Math.min(380, Math.max(140, innerWidth / 4))));
+  resizeHyperspaceCanvas();
+  hyperspaceCanvas.classList.add("visible");
   html.classList.add("warp-stop");
   setTimeout(() => {
     html.classList.remove("warp-stop");
-    void overlay.offsetWidth; // ensure the restarted animation actually plays
-    overlay.classList.add("burst");
-    setTimeout(() => {
-      swap(); // hidden behind the now fully-opaque overlay
-      setTimeout(() => {
-        overlay.classList.remove("burst");
-        overlay.classList.add("clear");
-        setTimeout(() => {
-          overlay.classList.remove("clear");
+    const jumpStart = performance.now();
+    const tickJump = (now) => {
+      const t = Math.min(1, (now - jumpStart) / HYPERSPACE_JUMP_MS);
+      drawHyperspaceFrame(t, 1);
+      if (t < 1) requestAnimationFrame(tickJump);
+      else onJumpComplete();
+    };
+    requestAnimationFrame(tickJump);
+    function onJumpComplete() {
+      swap(); // hidden behind the now fully-opaque canvas
+      app.classList.remove("warp-arrive");
+      void app.offsetWidth; // restart the animation even on rapid re-clicks
+      app.classList.add("warp-arrive");
+      const arriveStart = performance.now();
+      const tickArrive = (now) => {
+        const t = Math.min(1, (now - arriveStart) / HYPERSPACE_ARRIVE_MS);
+        drawHyperspaceFrame(1 + t * .6, 1 - t);
+        if (t < 1) requestAnimationFrame(tickArrive);
+        else {
+          hyperspaceCanvas.classList.remove("visible");
+          app.classList.remove("warp-arrive");
           warping = false;
-        }, HYPERSPACE_CLEAR_MS);
-      }, HYPERSPACE_SWAP_BUFFER_MS);
-    }, HYPERSPACE_BURST_MS);
+        }
+      };
+      requestAnimationFrame(tickArrive);
+    }
   }, HYPERSPACE_STOP_MS);
 }
 function afterRender(options = {}) {

@@ -374,22 +374,22 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .toast { position: fixed; left: 50%; bottom: calc(1.6rem + env(safe-area-inset-bottom, 0px)); z-index: 80; translate: -50% 1rem; max-width: calc(100vw - 2rem); padding: .75rem 1.1rem; border: 1px solid rgba(155,89,182,.25); border-radius: 10px; background: var(--glass-strong); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: var(--shadow), var(--glow); color: var(--ink); font: 400 .72rem var(--mono); letter-spacing: .08em; opacity: 0; pointer-events: none; transition: opacity .4s ease, translate .4s var(--ease); }
 .toast.show { opacity: 1; translate: -50% 0; }
 .toast::before { content: "◆ "; color: var(--crimson); }
-/* Hyperspace jump: a hand-timed three-beat sequence (see hyperspaceJump() in
- * app.js), not a single automatic cross-fade. (1) "warp-stop" holds the current
- * page an instant, dimmed and pulled back, like the engines cutting out.
- * (2) .hyperspace.burst rushes a solid starburst in from a point until it fully
- * covers the screen — the actual page swap happens hidden behind that full
- * coverage, so nothing jarring is ever visible. (3) .hyperspace.clear peels the
- * burst back apart to reveal the record that has already opened underneath. */
+/* Hyperspace jump (see hyperspaceJump() in app.js for the full sequence): the
+ * current page holds for a beat ("warp-stop"), then a canvas-drawn field of
+ * streaks accelerates outward from a point into a bright converging tunnel —
+ * the actual page swap happens hidden behind its full coverage — and finally
+ * the streaks recede while the arriving record expands to fill the screen
+ * (#app.warp-arrive). The canvas paints its own backdrop and fade, so this
+ * element itself is just an on/off visibility switch. */
 .warp-stop .scene, .warp-stop .site-header, .warp-stop #app, .warp-stop .site-footer { filter: saturate(.35) brightness(.72); transform: scale(.985); transition: filter .32s ease, transform .32s cubic-bezier(.4,0,.2,1); }
-.hyperspace { position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: 0; background:
-  radial-gradient(circle at 50% 50%, #fff 0%, rgba(232,225,245,.75) 5%, transparent 28%),
-  repeating-conic-gradient(from 0deg, rgba(255,255,255,.95) 0deg .3deg, rgba(201,162,77,.55) .3deg 1.4deg, rgba(155,89,182,.3) 1.4deg 3deg, transparent 3deg 7deg),
-  radial-gradient(circle at 50% 50%, #1c1226 0%, #0b0a0f 70%); }
-.hyperspace.burst { animation: hyperspace-burst .3s cubic-bezier(.5,0,1,1) forwards; }
-.hyperspace.clear { animation: hyperspace-clear .52s cubic-bezier(0,.6,.4,1) forwards; }
-@keyframes hyperspace-burst { from { opacity: 0; transform: scale(.06); } to { opacity: 1; transform: scale(1); } }
-@keyframes hyperspace-clear { from { opacity: 1; transform: scale(1); filter: blur(0); } to { opacity: 0; transform: scale(2.3); filter: blur(6px); } }
+.hyperspace { position: fixed; inset: 0; z-index: 200; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
+.hyperspace.visible { opacity: 1; }
+#app.warp-arrive { animation: warp-arrive .56s cubic-bezier(.16,.84,.44,1) both; transform-origin: 50% 50%; }
+@keyframes warp-arrive {
+  from { opacity: 0; transform: scale(.22); filter: blur(9px) brightness(1.7); }
+  55% { opacity: 1; }
+  to { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); }
+}
 
 .lightbox { position: fixed; inset: 0; z-index: 90; display: grid; place-content: center; justify-items: center; gap: .8rem; padding: 3.5rem 1rem 2rem; background: rgba(6, 4, 9, .92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: veil-in .25s ease both; cursor: zoom-out; }
 .lightbox img { max-width: min(92vw, 90rem); max-height: 80vh; border: 1px solid rgba(155,89,182,.25); border-radius: 12px; box-shadow: 0 2rem 6rem rgba(0,0,0,.7), 0 0 5rem rgba(155,89,182,.2); animation: frame-in .4s var(--ease) both; }
