@@ -186,7 +186,12 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .hero-title span { display: block; animation: title-in 1.1s var(--ease) both; }
 .hero-title span:nth-child(2) { animation-delay: .14s; background: linear-gradient(100deg, var(--crimson) 0%, var(--crimson-light) 30%, var(--amber) 52%, var(--violet) 78%, var(--crimson) 100%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: title-in 1.1s .14s var(--ease) both, sheen 7s 1.4s ease-in-out infinite; filter: drop-shadow(0 .4rem 1.2rem rgba(155,89,182,.22)); padding-bottom: .08em; }
 .hero-lead { max-width: 36rem; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.65; animation: rise .9s .3s var(--ease) both; }
-.hero-search { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .9rem; width: min(34rem, 100%); margin-top: 2.2rem; padding: 0 1.1rem; border: 1px solid rgba(155,89,182,.22); border-radius: 12px; background: var(--glass-strong); box-shadow: var(--shadow), var(--glow); animation: rise .9s .42s var(--ease) both; transition: border-color .25s ease, box-shadow .25s ease, transform .25s var(--ease); }
+.hero-search-row { display: flex; flex-wrap: wrap; align-items: center; gap: .8rem; margin-top: 2.2rem; }
+.hero-search { position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .9rem; width: min(34rem, 100%); flex: 1 1 22rem; padding: 0 1.1rem; border: 1px solid rgba(155,89,182,.22); border-radius: 12px; background: var(--glass-strong); box-shadow: var(--shadow), var(--glow); animation: rise .9s .42s var(--ease) both; transition: border-color .25s ease, box-shadow .25s ease, transform .25s var(--ease); }
+.hero-random { flex: none; display: inline-flex; align-items: center; gap: .55rem; padding: 1rem 1.2rem; border: 1px solid rgba(155,89,182,.22); border-radius: 12px; background: var(--glass-strong); box-shadow: var(--shadow); color: var(--ink-2); font: 500 .74rem var(--mono); letter-spacing: .1em; text-transform: uppercase; animation: rise .9s .48s var(--ease) both; transition: border-color .25s ease, box-shadow .25s ease, transform .25s var(--ease), color .25s ease; }
+.hero-random svg { width: 1rem; height: 1rem; color: var(--crimson); transition: transform .5s var(--ease); }
+.hero-random:hover { border-color: rgba(155,89,182,.5); color: var(--ink); box-shadow: var(--shadow), var(--glow); transform: translateY(-1px); }
+.hero-random:hover svg { transform: rotate(160deg); }
 .hero-search:hover, .hero-search:focus-within { border-color: rgba(155,89,182,.55); box-shadow: 0 1.6rem 3.6rem rgba(0,0,0,.5), 0 0 3rem rgba(155,89,182,.3); transform: translateY(-1px); }
 .hero-search::after { content: ""; position: absolute; left: 1rem; right: 1rem; bottom: -1px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--crimson), var(--amber-light), var(--violet)); opacity: .8; }
 .hero-search svg { width: 1.2rem; color: var(--crimson); }
@@ -369,18 +374,22 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .toast { position: fixed; left: 50%; bottom: calc(1.6rem + env(safe-area-inset-bottom, 0px)); z-index: 80; translate: -50% 1rem; max-width: calc(100vw - 2rem); padding: .75rem 1.1rem; border: 1px solid rgba(155,89,182,.25); border-radius: 10px; background: var(--glass-strong); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: var(--shadow), var(--glow); color: var(--ink); font: 400 .72rem var(--mono); letter-spacing: .08em; opacity: 0; pointer-events: none; transition: opacity .4s ease, translate .4s var(--ease); }
 .toast.show { opacity: 1; translate: -50% 0; }
 .toast::before { content: "◆ "; color: var(--crimson); }
-/* The flash-of-light moment as a record navigation "jumps to hyperspace" — a
- * starburst of streaks and a white core flash, layered above the view-transition
- * snapshots (see html.warp below) which stretch and blur underneath it. */
-.hyperspace { position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: 0; mix-blend-mode: screen; background:
-  radial-gradient(circle at 50% 50%, #fff 0%, rgba(232,225,245,.6) 8%, transparent 32%),
-  repeating-conic-gradient(from 0deg, rgba(255,255,255,.85) 0deg .35deg, rgba(201,162,77,.18) .35deg 2deg, transparent 2deg 6deg); }
-.hyperspace.jump { animation: hyperspace-flash .65s cubic-bezier(.16,.84,.44,1) both; }
-@keyframes hyperspace-flash {
-  0% { opacity: 0; transform: scale(.15); }
-  22% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0; transform: scale(3.4); filter: blur(3px); }
-}
+/* Hyperspace jump: a hand-timed three-beat sequence (see hyperspaceJump() in
+ * app.js), not a single automatic cross-fade. (1) "warp-stop" holds the current
+ * page an instant, dimmed and pulled back, like the engines cutting out.
+ * (2) .hyperspace.burst rushes a solid starburst in from a point until it fully
+ * covers the screen — the actual page swap happens hidden behind that full
+ * coverage, so nothing jarring is ever visible. (3) .hyperspace.clear peels the
+ * burst back apart to reveal the record that has already opened underneath. */
+.warp-stop .scene, .warp-stop .site-header, .warp-stop #app, .warp-stop .site-footer { filter: saturate(.35) brightness(.72); transform: scale(.985); transition: filter .32s ease, transform .32s cubic-bezier(.4,0,.2,1); }
+.hyperspace { position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: 0; background:
+  radial-gradient(circle at 50% 50%, #fff 0%, rgba(232,225,245,.75) 5%, transparent 28%),
+  repeating-conic-gradient(from 0deg, rgba(255,255,255,.95) 0deg .3deg, rgba(201,162,77,.55) .3deg 1.4deg, rgba(155,89,182,.3) 1.4deg 3deg, transparent 3deg 7deg),
+  radial-gradient(circle at 50% 50%, #1c1226 0%, #0b0a0f 70%); }
+.hyperspace.burst { animation: hyperspace-burst .3s cubic-bezier(.5,0,1,1) forwards; }
+.hyperspace.clear { animation: hyperspace-clear .52s cubic-bezier(0,.6,.4,1) forwards; }
+@keyframes hyperspace-burst { from { opacity: 0; transform: scale(.06); } to { opacity: 1; transform: scale(1); } }
+@keyframes hyperspace-clear { from { opacity: 1; transform: scale(1); filter: blur(0); } to { opacity: 0; transform: scale(2.3); filter: blur(6px); } }
 
 .lightbox { position: fixed; inset: 0; z-index: 90; display: grid; place-content: center; justify-items: center; gap: .8rem; padding: 3.5rem 1rem 2rem; background: rgba(6, 4, 9, .92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: veil-in .25s ease both; cursor: zoom-out; }
 .lightbox img { max-width: min(92vw, 90rem); max-height: 80vh; border: 1px solid rgba(155,89,182,.25); border-radius: 12px; box-shadow: 0 2rem 6rem rgba(0,0,0,.7), 0 0 5rem rgba(155,89,182,.2); animation: frame-in .4s var(--ease) both; }
@@ -411,15 +420,6 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 @keyframes vt-out { to { opacity: 0; transform: translateY(-.6rem); filter: blur(4px); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(1rem); } }
 
-/* Hyperspace jump: a record navigation overrides the ordinary root transition
- * above with a much more aggressive stretch-and-blur, timed to the starburst
- * flash in .hyperspace. Higher specificity than the bare rules above wins here
- * regardless of source order. */
-html.warp::view-transition-old(root) { animation: warp-out .5s cubic-bezier(.55,0,1,.45) both; }
-html.warp::view-transition-new(root) { animation: warp-in .6s cubic-bezier(0,.55,.45,1) .1s both; }
-@keyframes warp-out { to { transform: scale(1.7); opacity: 0; filter: blur(14px) brightness(2.2); } }
-@keyframes warp-in { from { transform: scale(.8); opacity: 0; filter: blur(18px) brightness(2.4); } to { transform: scale(1); opacity: 1; filter: blur(0) brightness(1); } }
-
 @media (max-width: 900px) {
   .sync-pill span { display: none; }
   .article-layout.has-contents { width: min(54rem, 100%); grid-template-columns: minmax(0, 1fr); }
@@ -440,6 +440,7 @@ html.warp::view-transition-new(root) { animation: warp-in .6s cubic-bezier(0,.55
   .hero-sigil { order: -1; justify-self: center; max-width: 12rem; }
   .hero-search { width: 100%; }
   .hero-search kbd { display: none; }
+  .hero-random { width: 100%; justify-content: center; }
   .section-art { display: none; }
   .record-row, .record-row.is-static { grid-template-columns: 3.2rem minmax(0,1fr); gap: .9rem; align-items: start; }
   .record-num { padding-top: .35rem; }

@@ -222,25 +222,50 @@ function navigate(href) {
   const path = href.replace(/^#/, "") || "/";
   closeSearch(); closeMenus();
   if (path === currentPath()) { scrollTo({ top: 0, behavior: "smooth" }); return; }
-  if (isRecordPath(path) && !reducedMotion.matches) hyperspaceJump();
-  if (PREVIEW) location.hash = path; // hashchange triggers route()
-  else { history.pushState({}, "", path); route(); }
+  const perform = () => { if (PREVIEW) location.hash = path; else { history.pushState({}, "", path); route({ instant: true }); } };
+  if (isRecordPath(path) && !reducedMotion.matches && !warping) hyperspaceJump(perform);
+  else perform();
 }
 const isRecordPath = (path) => path.split("/").filter(Boolean)[0] === "record";
-/* A Star Wars-flavoured way to arrive at a holocron: the outgoing and incoming
- * view-transition snapshots stretch and blur (see the ::view-transition rules
- * scoped to html.warp), layered with a starburst flash overlay for the flash of
- * "entering hyperspace" itself. Self-cleans so it never lingers on later, ordinary
- * navigations. */
-let hyperspaceTimer;
-function hyperspaceJump() {
-  document.documentElement.classList.add("warp");
+
+/* A Star Wars-flavoured way to arrive at a holocron, hand-timed as three beats
+ * rather than one automatic cross-fade — this is deliberately not built on the
+ * View Transition API, so each beat can be paced on its own:
+ *   1. warp-stop  — the current page holds for a moment, dimmed and pulled back,
+ *      like the engines cutting out before the jump.
+ *   2. .burst     — a starburst rushes in from a point until it fully covers the
+ *      screen. The actual page swap happens right as it reaches full cover, so
+ *      it's completely hidden — no visible cut, no cross-fade artifact.
+ *   3. .clear     — the burst peels back apart, revealing the record that has
+ *      already opened underneath.
+ * Durations here match the animation-duration values in styles.css exactly. */
+const HYPERSPACE_STOP_MS = 380;
+const HYPERSPACE_BURST_MS = 300;
+const HYPERSPACE_SWAP_BUFFER_MS = 70;
+const HYPERSPACE_CLEAR_MS = 520;
+let warping = false;
+function hyperspaceJump(swap) {
+  warping = true;
+  const html = document.documentElement;
   const overlay = byId("hyperspace");
-  overlay.classList.remove("jump");
-  void overlay.offsetWidth; // restart the animation even on rapid re-clicks
-  overlay.classList.add("jump");
-  clearTimeout(hyperspaceTimer);
-  hyperspaceTimer = setTimeout(() => document.documentElement.classList.remove("warp"), 750);
+  overlay.classList.remove("burst", "clear");
+  html.classList.add("warp-stop");
+  setTimeout(() => {
+    html.classList.remove("warp-stop");
+    void overlay.offsetWidth; // ensure the restarted animation actually plays
+    overlay.classList.add("burst");
+    setTimeout(() => {
+      swap(); // hidden behind the now fully-opaque overlay
+      setTimeout(() => {
+        overlay.classList.remove("burst");
+        overlay.classList.add("clear");
+        setTimeout(() => {
+          overlay.classList.remove("clear");
+          warping = false;
+        }, HYPERSPACE_CLEAR_MS);
+      }, HYPERSPACE_SWAP_BUFFER_MS);
+    }, HYPERSPACE_BURST_MS);
+  }, HYPERSPACE_STOP_MS);
 }
 function afterRender(options = {}) {
   bindImageFallbacks(app); bindMotion(app); observeReveals(app);
@@ -254,6 +279,18 @@ function renderMenus() {
 }
 
 const SEARCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>`;
+const RANDOM_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>`;
+/* Shared by the header's persistent Random button and the hero's copy of it. */
+function jumpToRandomRecord() {
+  const records = searchableRecords();
+  if (!records.length) return;
+  let pick = records[Math.floor(Math.random() * records.length)];
+  const current = currentPath();
+  for (let guard = 0; guard < 8 && records.length > 1 && recordHref(pick) === current; guard += 1) {
+    pick = records[Math.floor(Math.random() * records.length)];
+  }
+  navigate(recordHref(pick));
+}
 const HERO_SIGIL = `<svg viewBox="-100 -100 200 200" aria-hidden="true">
   <g class="ring r1" stroke-width=".6"><circle r="96"/>${Array.from({ length: 72 }, (_, i) => { const a = (i / 72) * Math.PI * 2, r = i % 6 === 0 ? 86 : 91; return `<path d="M${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)} L${(Math.cos(a) * 96).toFixed(1)},${(Math.sin(a) * 96).toFixed(1)}"/>`; }).join("")}</g>
   <g class="ring r2" stroke-width=".7"><circle r="78" stroke-dasharray="2 7"/><circle r="72" stroke-dasharray="40 14 6 14"/><circle class="orb" cx="78" cy="0" r="2.4"/><circle class="orb" cx="-78" cy="0" r="1.5"/></g>
@@ -276,11 +313,14 @@ function renderHome(options) {
         <div class="eyebrow">The Sith Order</div>
         <h1 class="hero-title"><span>Holocron</span><span>Network</span></h1>
         <p class="hero-lead">${escapeHtml(state.board.description || "The holocron network of the Sith Order: every vault, every record, every keeper.")}</p>
-        <form class="hero-search" role="search" id="heroSearch">
-          ${SEARCH_ICON}
-          <input type="search" placeholder="Search holocrons, vaults, keepers…" autocomplete="off" aria-label="Search the network" />
-          <kbd aria-hidden="true">/</kbd>
-        </form>
+        <div class="hero-search-row">
+          <form class="hero-search" role="search" id="heroSearch">
+            ${SEARCH_ICON}
+            <input type="search" placeholder="Search holocrons, vaults, keepers…" autocomplete="off" aria-label="Search the network" />
+            <kbd aria-hidden="true">/</kbd>
+          </form>
+          <button type="button" class="hero-random" id="heroRandomButton" title="Jump to a random holocron">${RANDOM_ICON}<span>Random</span></button>
+        </div>
         <div class="hero-actions"><a class="btn" href="#sections" data-scroll>Enter the vaults <span aria-hidden="true">↓</span></a></div>
       </div>
       <div class="hero-sigil" id="heroSigil">${HERO_SIGIL}</div>
@@ -301,6 +341,7 @@ function renderHome(options) {
   const search = byId("heroSearch");
   search.addEventListener("submit", (event) => { event.preventDefault(); openSearch(search.querySelector("input").value); });
   search.querySelector("input").addEventListener("focus", () => openSearch(search.querySelector("input").value));
+  byId("heroRandomButton").addEventListener("click", jumpToRandomRecord);
   afterRender(options);
 }
 
@@ -721,16 +762,7 @@ function safeUrl(value = "") { try { const url = new URL(value); return ["http:"
 byId("menuToggle").addEventListener("click", () => { const open = byId("mainNav").classList.toggle("open"); byId("menuToggle").setAttribute("aria-expanded", String(open)); });
 byId("sectionsButton").addEventListener("click", () => { const open = byId("sectionsPopover").classList.toggle("open"); byId("sectionsButton").setAttribute("aria-expanded", String(open)); });
 byId("searchTrigger").addEventListener("click", () => openSearch());
-byId("randomButton").addEventListener("click", () => {
-  const records = searchableRecords();
-  if (!records.length) return;
-  let pick = records[Math.floor(Math.random() * records.length)];
-  const current = currentPath();
-  for (let guard = 0; guard < 8 && records.length > 1 && recordHref(pick) === current; guard += 1) {
-    pick = records[Math.floor(Math.random() * records.length)];
-  }
-  navigate(recordHref(pick));
-});
+byId("randomButton").addEventListener("click", jumpToRandomRecord);
 byId("closeSearch").addEventListener("click", closeSearch);
 byId("globalSearch").addEventListener("input", (event) => renderSearch(event.target.value));
 byId("globalSearch").addEventListener("keydown", (event) => {
