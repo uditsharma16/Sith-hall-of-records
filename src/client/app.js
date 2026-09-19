@@ -222,8 +222,25 @@ function navigate(href) {
   const path = href.replace(/^#/, "") || "/";
   closeSearch(); closeMenus();
   if (path === currentPath()) { scrollTo({ top: 0, behavior: "smooth" }); return; }
+  if (isRecordPath(path) && !reducedMotion.matches) hyperspaceJump();
   if (PREVIEW) location.hash = path; // hashchange triggers route()
   else { history.pushState({}, "", path); route(); }
+}
+const isRecordPath = (path) => path.split("/").filter(Boolean)[0] === "record";
+/* A Star Wars-flavoured way to arrive at a holocron: the outgoing and incoming
+ * view-transition snapshots stretch and blur (see the ::view-transition rules
+ * scoped to html.warp), layered with a starburst flash overlay for the flash of
+ * "entering hyperspace" itself. Self-cleans so it never lingers on later, ordinary
+ * navigations. */
+let hyperspaceTimer;
+function hyperspaceJump() {
+  document.documentElement.classList.add("warp");
+  const overlay = byId("hyperspace");
+  overlay.classList.remove("jump");
+  void overlay.offsetWidth; // restart the animation even on rapid re-clicks
+  overlay.classList.add("jump");
+  clearTimeout(hyperspaceTimer);
+  hyperspaceTimer = setTimeout(() => document.documentElement.classList.remove("warp"), 750);
 }
 function afterRender(options = {}) {
   bindImageFallbacks(app); bindMotion(app); observeReveals(app);
@@ -704,6 +721,16 @@ function safeUrl(value = "") { try { const url = new URL(value); return ["http:"
 byId("menuToggle").addEventListener("click", () => { const open = byId("mainNav").classList.toggle("open"); byId("menuToggle").setAttribute("aria-expanded", String(open)); });
 byId("sectionsButton").addEventListener("click", () => { const open = byId("sectionsPopover").classList.toggle("open"); byId("sectionsButton").setAttribute("aria-expanded", String(open)); });
 byId("searchTrigger").addEventListener("click", () => openSearch());
+byId("randomButton").addEventListener("click", () => {
+  const records = searchableRecords();
+  if (!records.length) return;
+  let pick = records[Math.floor(Math.random() * records.length)];
+  const current = currentPath();
+  for (let guard = 0; guard < 8 && records.length > 1 && recordHref(pick) === current; guard += 1) {
+    pick = records[Math.floor(Math.random() * records.length)];
+  }
+  navigate(recordHref(pick));
+});
 byId("closeSearch").addEventListener("click", closeSearch);
 byId("globalSearch").addEventListener("input", (event) => renderSearch(event.target.value));
 byId("globalSearch").addEventListener("keydown", (event) => {

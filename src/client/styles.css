@@ -115,6 +115,9 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .search-trigger:hover { border-color: rgba(155,89,182,.5); color: var(--ink); transform: translateY(-2px); box-shadow: var(--shadow), var(--glow); }
 .search-trigger:active { transform: scale(.97); }
 .search-trigger svg { width: 1rem; color: var(--crimson); }
+.random-trigger { display: inline-flex; align-items: center; gap: .4rem; }
+.random-trigger svg { width: .85rem; height: .85rem; color: var(--crimson); transition: transform .5s var(--ease); }
+.random-trigger:hover svg { transform: rotate(160deg); }
 .sync-pill { display: inline-flex; align-items: center; gap: .5rem; font: 400 .66rem var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 .sync-pill i { position: relative; width: .45rem; height: .45rem; border-radius: 50%; background: var(--faint); }
 .sync-pill[data-state="live"] i { background: #12b76a; box-shadow: 0 0 .6rem #12b76a; }
@@ -179,7 +182,7 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 
 /* ───────── Home ───────── */
 .hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: center; gap: clamp(1.5rem, 4vw, 4rem); }
-.hero-title { margin: 1.2rem 0 1.4rem; font: 400 clamp(2.9rem, 8.2vw, 6.6rem)/.98 var(--display); letter-spacing: -.02em; color: var(--ink); }
+.hero-title { margin: 1.2rem 0 1.4rem; font: 700 clamp(2.9rem, 8.2vw, 6.6rem)/.98 var(--display); letter-spacing: -.02em; color: var(--ink); }
 .hero-title span { display: block; animation: title-in 1.1s var(--ease) both; }
 .hero-title span:nth-child(2) { animation-delay: .14s; background: linear-gradient(100deg, var(--crimson) 0%, var(--crimson-light) 30%, var(--amber) 52%, var(--violet) 78%, var(--crimson) 100%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: title-in 1.1s .14s var(--ease) both, sheen 7s 1.4s ease-in-out infinite; filter: drop-shadow(0 .4rem 1.2rem rgba(155,89,182,.22)); padding-bottom: .08em; }
 .hero-lead { max-width: 36rem; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 1.6vw, 1.22rem); line-height: 1.65; animation: rise .9s .3s var(--ease) both; }
@@ -366,6 +369,19 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .toast { position: fixed; left: 50%; bottom: calc(1.6rem + env(safe-area-inset-bottom, 0px)); z-index: 80; translate: -50% 1rem; max-width: calc(100vw - 2rem); padding: .75rem 1.1rem; border: 1px solid rgba(155,89,182,.25); border-radius: 10px; background: var(--glass-strong); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: var(--shadow), var(--glow); color: var(--ink); font: 400 .72rem var(--mono); letter-spacing: .08em; opacity: 0; pointer-events: none; transition: opacity .4s ease, translate .4s var(--ease); }
 .toast.show { opacity: 1; translate: -50% 0; }
 .toast::before { content: "◆ "; color: var(--crimson); }
+/* The flash-of-light moment as a record navigation "jumps to hyperspace" — a
+ * starburst of streaks and a white core flash, layered above the view-transition
+ * snapshots (see html.warp below) which stretch and blur underneath it. */
+.hyperspace { position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: 0; mix-blend-mode: screen; background:
+  radial-gradient(circle at 50% 50%, #fff 0%, rgba(232,225,245,.6) 8%, transparent 32%),
+  repeating-conic-gradient(from 0deg, rgba(255,255,255,.85) 0deg .35deg, rgba(201,162,77,.18) .35deg 2deg, transparent 2deg 6deg); }
+.hyperspace.jump { animation: hyperspace-flash .65s cubic-bezier(.16,.84,.44,1) both; }
+@keyframes hyperspace-flash {
+  0% { opacity: 0; transform: scale(.15); }
+  22% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(3.4); filter: blur(3px); }
+}
+
 .lightbox { position: fixed; inset: 0; z-index: 90; display: grid; place-content: center; justify-items: center; gap: .8rem; padding: 3.5rem 1rem 2rem; background: rgba(6, 4, 9, .92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: veil-in .25s ease both; cursor: zoom-out; }
 .lightbox img { max-width: min(92vw, 90rem); max-height: 80vh; border: 1px solid rgba(155,89,182,.25); border-radius: 12px; box-shadow: 0 2rem 6rem rgba(0,0,0,.7), 0 0 5rem rgba(155,89,182,.2); animation: frame-in .4s var(--ease) both; }
 .lightbox p { margin: 0; color: var(--muted); font: 400 .7rem var(--mono); letter-spacing: .1em; text-transform: uppercase; }
@@ -394,6 +410,15 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 ::view-transition-new(root) { animation: vt-in .45s var(--ease) both; }
 @keyframes vt-out { to { opacity: 0; transform: translateY(-.6rem); filter: blur(4px); } }
 @keyframes vt-in { from { opacity: 0; transform: translateY(1rem); } }
+
+/* Hyperspace jump: a record navigation overrides the ordinary root transition
+ * above with a much more aggressive stretch-and-blur, timed to the starburst
+ * flash in .hyperspace. Higher specificity than the bare rules above wins here
+ * regardless of source order. */
+html.warp::view-transition-old(root) { animation: warp-out .5s cubic-bezier(.55,0,1,.45) both; }
+html.warp::view-transition-new(root) { animation: warp-in .6s cubic-bezier(0,.55,.45,1) .1s both; }
+@keyframes warp-out { to { transform: scale(1.7); opacity: 0; filter: blur(14px) brightness(2.2); } }
+@keyframes warp-in { from { transform: scale(.8); opacity: 0; filter: blur(18px) brightness(2.4); } to { transform: scale(1); opacity: 1; filter: blur(0) brightness(1); } }
 
 @media (max-width: 900px) {
   .sync-pill span { display: none; }
