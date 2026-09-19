@@ -546,7 +546,7 @@ function createAtmosphere() {
 
   const canvas = byId("motes"); const context = canvas?.getContext("2d");
   if (!context) return;
-  const colors = ["200,16,46", "214,138,23", "123,92,240", "47,183,217", "238,63,92"];
+  const colors = ["155,89,182", "111,63,160", "201,162,77", "232,225,213", "91,42,130"];
   let width = 0, height = 0, motes = [], running = true;
   const spawn = (anywhere) => ({ x: Math.random() * width, y: anywhere ? Math.random() * height : height + 10, size: .7 + Math.random() * 1.9, speed: .1 + Math.random() * .4, sway: Math.random() * Math.PI * 2, swaySpeed: .003 + Math.random() * .01, alpha: .18 + Math.random() * .42, color: colors[Math.floor(Math.random() * colors.length)] });
   const resize = () => {
