@@ -2,7 +2,9 @@ name: Deploy to Cloudflare
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - claude/sith-hall-records-website-np8j78
   workflow_dispatch:
 
 permissions:
