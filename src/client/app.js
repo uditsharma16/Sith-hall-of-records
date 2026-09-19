@@ -648,7 +648,7 @@ function renderRecord(record, options) {
   const previous = current > 0 ? siblings[current - 1] : null;
   const next = current < siblings.length - 1 ? siblings[current + 1] : null;
   const headings = extractHeadings(record.description);
-  const figure = (image, lazy) => `<figure><button data-zoom="${escapeAttr(image.imageUrl)}" data-caption="${escapeAttr(captionOf(image, record))}" aria-label="Enlarge image"><img src="${escapeAttr(image.imageUrl)}" alt="${escapeAttr(captionOf(image, record))}" ${lazy ? 'loading="lazy"' : ""} /></button><figcaption>${escapeHtml(captionOf(image, record))}</figcaption></figure>`;
+  const figure = (image, lazy) => `<figure><button data-zoom="${escapeAttr(image.imageUrl)}" aria-label="Enlarge image"><img src="${escapeAttr(image.imageUrl)}" alt="${escapeAttr(captionOf(record))}" ${lazy ? 'loading="lazy"' : ""} /></button></figure>`;
 
   // Images referenced inline in the description are rendered where they appear; anything
   // left over (plus the cover, if it was not referenced inline) is shown as the gallery.
@@ -702,10 +702,11 @@ function ledger(record) {
     return `<div class="ledger-block"><h3>${escapeHtml(list.name || "Checklist")}<small>${done} / ${list.items.length}</small></h3><div class="ledger-bar"><i style="width:${Math.round((done / list.items.length) * 100)}%"></i></div><ul>${list.items.map((item) => `<li class="${item.complete ? "done" : ""}"><span>${inline(item.name)}</span></li>`).join("")}</ul></div>`;
   }).join("")}</section>`;
 }
-function captionOf(image, record) {
-  const name = (image.name || "").replace(/\.(png|jpe?g|gif|webp|avif)$/i, "");
-  return /^(image|img|screenshot|untitled|unnamed)?[\s_-]*\d*$/i.test(name) ? record.title : name;
-}
+/* Accessible alt text for a plain attachment image (hero/gallery, not one placed
+ * inline in the description). A Trello attachment's filename (e.g. "IMG_2384",
+ * "holocron.png") is metadata, not a caption anyone wrote on purpose, so it is
+ * never shown on the page — this is only read by screen readers. */
+function captionOf(record) { return record.title; }
 
 function renderNotFound() {
   document.title = "Record not found — TSO Holocron Network";
@@ -779,7 +780,7 @@ function toast(message) {
   node.textContent = message; node.classList.add("show");
   clearTimeout(toast.timer); toast.timer = setTimeout(() => node.classList.remove("show"), 4200);
 }
-function openLightbox(src, caption) { byId("lightboxImage").src = src; byId("lightboxImage").alt = caption; byId("lightboxCaption").textContent = caption; byId("lightbox").hidden = false; }
+function openLightbox(src, caption) { byId("lightboxImage").src = src; byId("lightboxImage").alt = caption; byId("lightboxCaption").textContent = caption; byId("lightboxCaption").hidden = !caption; byId("lightbox").hidden = false; }
 function closeLightbox() { byId("lightbox").hidden = true; byId("lightboxImage").removeAttribute("src"); }
 
 document.addEventListener("click", (event) => {
@@ -947,8 +948,12 @@ function figureFor(url, alt, context) {
   if (!attachment) return "";
   if (context.hero && attachment.id === context.hero.id) return "";
   context.shown?.add(attachment.id);
-  const caption = alt && !/^(image|img|screenshot)?[\s_-]*\d*(\.\w+)?$/i.test(alt) ? alt : captionOf(attachment, context.record || {});
-  return `<figure><button data-zoom="${escapeAttr(attachment.imageUrl)}" data-caption="${escapeAttr(caption)}" aria-label="Enlarge image"><img src="${escapeAttr(attachment.imageUrl)}" alt="${escapeAttr(caption)}" loading="lazy" /></button>${caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""}</figure>`;
+  // No visible caption for inline images either — even a deliberately-typed alt
+  // is often really just the filename an author never meant to publish (e.g.
+  // "diagram", "IMG_2384"). It's still used as the accessible alt attribute.
+  const isMeaningful = alt && !/^(image|img|screenshot)?[\s_-]*\d*(\.\w+)?$/i.test(alt);
+  const altText = isMeaningful ? alt : captionOf(context.record || {});
+  return `<figure><button data-zoom="${escapeAttr(attachment.imageUrl)}" aria-label="Enlarge image"><img src="${escapeAttr(attachment.imageUrl)}" alt="${escapeAttr(altText)}" loading="lazy" /></button></figure>`;
 }
 function inline(value = "") {
   const tokens = [];
