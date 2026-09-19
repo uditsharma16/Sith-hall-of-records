@@ -394,7 +394,8 @@ function jumpToRandomRecord() {
 /* ───────── Probe droid ─────────
  * A small mascot, not tied to any page's own render cycle, so it's wired once
  * here rather than in afterRender(). Its eye colour is driven by updateSyncLabel()
- * (see state.live handling above); everything else is just for charm. */
+ * (see state.live handling above). On larger screens it quietly patrols the
+ * viewport perimeter; pointer events make it draggable with mouse or touch. */
 const DROID_QUIPS = [
   "Scanning for rebel activity.",
   "This signal originates from a Sith temple.",
@@ -406,6 +407,7 @@ const DROID_QUIPS = [
   "Do not touch the artefacts. I am watching.",
 ];
 let droidBubbleTimer;
+const droidMotion = { x: 0, y: 0, pointerId: null, offsetX: 0, offsetY: 0, startX: 0, startY: 0, dragged: false, suppressClick: false, patrolIndex: 0, patrolTimer: 0, resumeTimer: 0 };
 function showDroidBubble(text) {
   const bubble = byId("droidBubble");
   bubble.textContent = text;
@@ -419,6 +421,108 @@ function droidReact(line) {
   void droid.offsetWidth; // restart the animation even on rapid re-triggers
   droid.classList.add("startled");
   showDroidBubble(line || DROID_QUIPS[Math.floor(Math.random() * DROID_QUIPS.length)]);
+}
+function droidLimits() {
+  const droid = byId("droid");
+  const margin = innerWidth <= 760 ? 10 : 18;
+  const headerBottom = byId("siteHeader")?.getBoundingClientRect().bottom || 0;
+  return { minX: margin, maxX: Math.max(margin, innerWidth - droid.offsetWidth - margin), minY: Math.max(margin, headerBottom + 12), maxY: Math.max(margin, innerHeight - droid.offsetHeight - margin) };
+}
+function clampDroid(x, y) {
+  const limits = droidLimits();
+  return { x: Math.min(limits.maxX, Math.max(limits.minX, x)), y: Math.min(limits.maxY, Math.max(Math.min(limits.minY, limits.maxY), y)) };
+}
+function placeDroid(x, y, duration = 0) {
+  const droid = byId("droid");
+  const next = clampDroid(x, y);
+  droidMotion.x = next.x; droidMotion.y = next.y;
+  droid.style.setProperty("--droid-travel", `${duration}s`);
+  droid.style.setProperty("--droid-x", `${next.x}px`);
+  droid.style.setProperty("--droid-y", `${next.y}px`);
+  droid.dataset.side = next.x + droid.offsetWidth / 2 < innerWidth / 2 ? "left" : "right";
+  droid.dataset.vertical = next.y + droid.offsetHeight / 2 < innerHeight / 2 ? "top" : "bottom";
+}
+function droidWaypoints() {
+  const { minX, maxX, minY, maxY } = droidLimits();
+  const span = Math.max(0, maxY - minY);
+  return [
+    { x: maxX, y: maxY },
+    { x: maxX, y: minY + span * .48 },
+    { x: maxX, y: minY },
+    { x: minX, y: minY },
+    { x: minX, y: minY + span * .52 },
+    { x: minX, y: maxY },
+  ];
+}
+function stopDroidPatrol() {
+  clearTimeout(droidMotion.patrolTimer); clearTimeout(droidMotion.resumeTimer);
+}
+function scheduleDroidPatrol(delay = 4200) {
+  clearTimeout(droidMotion.patrolTimer);
+  if (reducedMotion.matches || innerWidth <= 760 || droidMotion.pointerId !== null || document.hidden) return;
+  droidMotion.patrolTimer = setTimeout(() => {
+    const points = droidWaypoints();
+    droidMotion.patrolIndex = (droidMotion.patrolIndex + 1) % points.length;
+    const next = points[droidMotion.patrolIndex];
+    const distance = Math.hypot(next.x - droidMotion.x, next.y - droidMotion.y);
+    const duration = Math.min(10, Math.max(5, distance / 82));
+    placeDroid(next.x, next.y, duration);
+    scheduleDroidPatrol(duration * 1000 + 2600 + Math.random() * 2200);
+  }, delay);
+}
+function resumeDroidPatrol(delay = 14000) {
+  clearTimeout(droidMotion.resumeTimer);
+  droidMotion.resumeTimer = setTimeout(() => scheduleDroidPatrol(0), delay);
+}
+function persistDroidPosition() {
+  const limits = droidLimits();
+  const width = Math.max(1, limits.maxX - limits.minX); const height = Math.max(1, limits.maxY - limits.minY);
+  try { localStorage.setItem("tso-droid-position-v1", JSON.stringify({ x: (droidMotion.x - limits.minX) / width, y: (droidMotion.y - limits.minY) / height })); } catch {}
+}
+function initDroid() {
+  const droid = byId("droid");
+  const limits = droidLimits();
+  let initial = { x: limits.maxX, y: limits.maxY };
+  try {
+    const saved = JSON.parse(localStorage.getItem("tso-droid-position-v1") || "null");
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) initial = { x: limits.minX + (limits.maxX - limits.minX) * saved.x, y: limits.minY + (limits.maxY - limits.minY) * saved.y };
+  } catch {}
+  placeDroid(initial.x, initial.y);
+  droid.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 && event.pointerType === "mouse") return;
+    const box = droid.getBoundingClientRect();
+    stopDroidPatrol();
+    droidMotion.pointerId = event.pointerId; droidMotion.dragged = false;
+    droidMotion.startX = event.clientX; droidMotion.startY = event.clientY;
+    droidMotion.offsetX = event.clientX - box.left; droidMotion.offsetY = event.clientY - box.top;
+    droid.classList.add("is-dragging");
+    droid.setPointerCapture(event.pointerId);
+    placeDroid(box.left, box.top);
+  });
+  droid.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== droidMotion.pointerId) return;
+    if (Math.hypot(event.clientX - droidMotion.startX, event.clientY - droidMotion.startY) > 5) droidMotion.dragged = true;
+    placeDroid(event.clientX - droidMotion.offsetX, event.clientY - droidMotion.offsetY);
+  });
+  const release = (event) => {
+    if (event.pointerId !== droidMotion.pointerId) return;
+    if (droid.hasPointerCapture(event.pointerId)) droid.releasePointerCapture(event.pointerId);
+    droid.classList.remove("is-dragging");
+    droidMotion.pointerId = null;
+    if (droidMotion.dragged) {
+      droidMotion.suppressClick = true;
+      persistDroidPosition();
+      showDroidBubble("Position logged. Patrol resuming shortly.");
+      setTimeout(() => { droidMotion.suppressClick = false; }, 500);
+    }
+    resumeDroidPatrol();
+  };
+  droid.addEventListener("pointerup", release);
+  droid.addEventListener("pointercancel", release);
+  droid.addEventListener("click", () => { if (!droidMotion.suppressClick) droidReact(); });
+  window.addEventListener("resize", () => { placeDroid(droidMotion.x, droidMotion.y); scheduleDroidPatrol(2400); }, { passive: true });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) stopDroidPatrol(); else scheduleDroidPatrol(2200); });
+  scheduleDroidPatrol();
 }
 const HERO_SIGIL = `<svg viewBox="-100 -100 200 200" aria-hidden="true">
   <g class="ring r1" stroke-width=".6"><circle r="96"/>${Array.from({ length: 72 }, (_, i) => { const a = (i / 72) * Math.PI * 2, r = i % 6 === 0 ? 86 : 91; return `<path d="M${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)} L${(Math.cos(a) * 96).toFixed(1)},${(Math.sin(a) * 96).toFixed(1)}"/>`; }).join("")}</g>
@@ -905,7 +1009,6 @@ byId("menuToggle").addEventListener("click", () => { const open = byId("mainNav"
 byId("sectionsButton").addEventListener("click", () => { const open = byId("sectionsPopover").classList.toggle("open"); byId("sectionsButton").setAttribute("aria-expanded", String(open)); });
 byId("searchTrigger").addEventListener("click", () => openSearch());
 byId("randomButton").addEventListener("click", jumpToRandomRecord);
-byId("droid").addEventListener("click", () => droidReact());
 byId("closeSearch").addEventListener("click", closeSearch);
 byId("globalSearch").addEventListener("input", (event) => renderSearch(event.target.value));
 byId("globalSearch").addEventListener("keydown", (event) => {
@@ -920,4 +1023,5 @@ document.addEventListener("keydown", (event) => {
 });
 window.addEventListener(PREVIEW ? "hashchange" : "popstate", () => route());
 createAtmosphere();
+initDroid();
 start();

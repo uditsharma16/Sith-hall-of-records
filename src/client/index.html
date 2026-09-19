@@ -78,10 +78,12 @@
   <div class="lightbox" id="lightbox" hidden><button id="lightboxClose" aria-label="Close image">Close</button><img id="lightboxImage" alt="" /><p id="lightboxCaption"></p></div>
   <canvas class="hyperspace" id="hyperspace" aria-hidden="true"></canvas>
 
-  <button type="button" class="droid" id="droid" data-state="connecting" aria-label="A wandering probe droid. Press for a status report.">
-    <span class="droid-glow" aria-hidden="true"></span>
-    <img class="droid-img" src="/droid.png" alt="" width="384" height="452" />
-    <span class="droid-eye" aria-hidden="true"></span>
+  <button type="button" class="droid" id="droid" data-state="connecting" data-side="right" data-vertical="bottom" aria-label="A wandering probe droid. Drag it to move it, or press for a status report." title="Drag me around">
+    <span class="droid-float" aria-hidden="true">
+      <span class="droid-glow"></span>
+      <img class="droid-img" src="/droid.png" alt="" width="384" height="452" draggable="false" />
+      <span class="droid-eye"></span>
+    </span>
     <span class="droid-bubble" id="droidBubble" aria-live="polite"></span>
   </button>
   <!-- app:end -->
