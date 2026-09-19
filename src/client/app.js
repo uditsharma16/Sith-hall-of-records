@@ -177,6 +177,33 @@ function chips(record) {
 const plural = (count, word) => `${count} ${word}${count === 1 ? "" : "s"}`;
 function recordLabel(record) { return record.code ? `<span class="record-code">${escapeHtml(record.code)}</span>${escapeHtml(record.title)}` : escapeHtml(record.title); }
 
+/* One-shot seeded PRNG (same FNV-1a + integer-mix technique as glyph() below),
+ * returning a single float in [0, 1) for a given string seed. */
+function seededRandom(seed = "") {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+  h |= 0; h = (h + 0x6d2b79f5) | 0;
+  let t = Math.imul(h ^ (h >>> 15), 1 | h);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+/* "Holocron of the day": the same record for every visitor, all day (UTC),
+ * with no storage anywhere — each record is scored by hashing today's date
+ * together with its own id (a rendezvous/highest-random-weight hash), and the
+ * highest score wins. Stable if the board changes elsewhere: adding or
+ * removing an unrelated card never perturbs today's pick, only removing the
+ * pick itself would (in which case a new highest score just takes over). */
+function holocronOfTheDay(records) {
+  if (!records.length) return null;
+  const dayKey = new Date().toISOString().slice(0, 10);
+  let best = null, bestScore = -1;
+  for (const record of records) {
+    const score = seededRandom(`${dayKey}:${record.id}`);
+    if (score > bestScore) { bestScore = score; best = record; }
+  }
+  return best;
+}
+
 /* A deterministic sigil per section/record, so entries without artwork still have a face. */
 function glyph(seed = "") {
   let h = 2166136261;
@@ -376,6 +403,8 @@ function renderHome(options) {
   document.title = `${state.board.name || "TSO"} — Holocron Network`;
   const records = searchableRecords();
   const tickerItems = records.map((record) => `<a href="${recordHref(record)}" data-link tabindex="-1">${escapeHtml(record.name)}</a>`).join("");
+  const spotlight = holocronOfTheDay(records);
+  const spotlightImage = spotlight ? primaryImage(spotlight) : null;
   app.innerHTML = `<div class="page">
     <section class="hero">
       <div class="hero-copy">
@@ -395,6 +424,17 @@ function renderHome(options) {
       <div class="hero-sigil" id="heroSigil">${HERO_SIGIL}</div>
     </section>
     ${records.length > 3 ? `<div class="ticker" aria-hidden="true"><div class="ticker-track" style="--ticker-time:${Math.max(30, records.length * 4)}s">${tickerItems}${tickerItems}</div></div>` : ""}
+    ${spotlight ? `<div class="rule"><i></i>Holocron of the day<i></i></div>
+    <a class="spotlight" href="${recordHref(spotlight)}" data-link data-reveal data-seed="${escapeAttr(spotlight.id)}">
+      <div class="spotlight-art">${spotlightImage ? `<img src="${escapeAttr(spotlightImage.imageUrl)}" alt="" loading="lazy" />` : glyph(spotlight.id)}</div>
+      <div class="spotlight-body">
+        <div class="spotlight-top"><span class="eyebrow">${escapeHtml(spotlight.section.name)}</span><span class="spotlight-date">${escapeHtml(formatDate(new Date()))}</span></div>
+        <h2>${recordLabel(spotlight)}</h2>
+        <p>${escapeHtml(excerpt(spotlight))}</p>
+        ${chips(spotlight)}
+        <span class="spotlight-cta">Open this record <span aria-hidden="true">→</span></span>
+      </div>
+    </a>` : ""}
     <div class="rule" id="sections"><i></i>Vaults of the network<i></i></div>
     <section class="section-index" aria-label="Network vaults">
       ${state.board.lists.map((section, index) => `<a class="holo" href="${sectionHref(section)}" data-link data-reveal style="--d:${Math.min(index * 70, 420)}ms">
@@ -592,7 +632,7 @@ function closeMenus() {
 }
 function bindImageFallbacks(root) {
   root.querySelectorAll("img").forEach((image) => image.addEventListener("error", () => {
-    const thumb = image.closest(".record-image, .search-thumb");
+    const thumb = image.closest(".record-image, .search-thumb, .spotlight-art");
     if (thumb) { thumb.classList.add("is-glyph"); thumb.innerHTML = glyph(thumb.closest("[data-seed]")?.dataset.seed || image.alt || "record"); return; }
     (image.closest("figure, .hero-media") || image).remove();
   }, { once: true }));
@@ -809,7 +849,7 @@ function excerpt(record) {
 }
 function stripMarkdown(value = "") {
   return cleanText(value)
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "") // drop inline images outright — their alt text is a caption, not prose
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
     .replace(/^\s{0,3}#{1,6}\s+/gm, "")
     .replace(/^\s*>\s?/gm, "")
