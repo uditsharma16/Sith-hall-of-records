@@ -375,13 +375,13 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .toast.show { opacity: 1; translate: -50% 0; }
 .toast::before { content: "◆ "; color: var(--crimson); }
 /* Hyperspace jump (see hyperspaceJump() in app.js for the full sequence): the
- * current page holds for a beat ("warp-stop"), then a canvas-drawn field of
- * streaks accelerates outward from a point into a bright converging tunnel —
- * the actual page swap happens hidden behind its full coverage — and finally
- * the streaks recede while the arriving record expands to fill the screen
- * (#app.warp-arrive). The canvas paints its own backdrop and fade, so this
- * element itself is just an on/off visibility switch. */
-.warp-stop .scene, .warp-stop .site-header, .warp-stop #app, .warp-stop .site-footer { filter: saturate(.35) brightness(.72); transform: scale(.985); transition: filter .32s ease, transform .32s cubic-bezier(.4,0,.2,1); }
+ * page holds for an instant exactly as-is (no fade, no filter — the click
+ * itself should feel like what triggers the jump), then a canvas-drawn field
+ * of streaks accelerates outward from a point into a bright converging tunnel
+ * — the actual page swap happens hidden behind its full coverage — and
+ * finally the streaks recede while the arriving record expands to fill the
+ * screen (#app.warp-arrive). The canvas paints its own backdrop and fade, so
+ * this element itself is just an on/off visibility switch. */
 .hyperspace { position: fixed; inset: 0; z-index: 200; width: 100%; height: 100%; pointer-events: none; opacity: 0; }
 .hyperspace.visible { opacity: 1; }
 #app.warp-arrive { animation: warp-arrive .56s cubic-bezier(.16,.84,.44,1) both; transform-origin: 50% 50%; }

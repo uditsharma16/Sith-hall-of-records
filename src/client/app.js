@@ -230,8 +230,8 @@ const isRecordPath = (path) => path.split("/").filter(Boolean)[0] === "record";
 
 /* A Star Wars-flavoured way to arrive at a holocron, hand-timed in beats rather
  * than one automatic cross-fade:
- *   1. warp-stop — the current page holds for a moment, dimmed and pulled back,
- *      like the engines cutting out before the jump.
+ *   1. A brief, purely-timed beat — the page holds exactly as it looked before
+ *      the click, no fade or filter, so the click itself reads as the trigger.
  *   2. A canvas-drawn field of streaks accelerates outward from a point into a
  *      bright converging tunnel. The actual page swap happens the instant it
  *      reaches full coverage, hidden completely behind it.
@@ -295,19 +295,19 @@ function drawHyperspaceFrame(motion, alpha) {
   }
 }
 
-const HYPERSPACE_STOP_MS = 340;
+const HYPERSPACE_STOP_MS = 90;
 const HYPERSPACE_JUMP_MS = 620;   // streak field accelerating to full screen coverage
 const HYPERSPACE_ARRIVE_MS = 560; // streaks receding + #app expanding, together
 let warping = false;
 function hyperspaceJump(swap) {
   warping = true;
-  const html = document.documentElement;
   hyperspaceField = makeHyperspaceField(Math.round(Math.min(380, Math.max(140, innerWidth / 4))));
   resizeHyperspaceCanvas();
   hyperspaceCanvas.classList.add("visible");
-  html.classList.add("warp-stop");
+  // A short, purely-timed beat with no visual change of its own — the page holds
+  // for a moment exactly as it looked before the click, so the cut into the
+  // streak field feels like the click itself triggered the jump, not a fade.
   setTimeout(() => {
-    html.classList.remove("warp-stop");
     const jumpStart = performance.now();
     const tickJump = (now) => {
       const t = Math.min(1, (now - jumpStart) / HYPERSPACE_JUMP_MS);
