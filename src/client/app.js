@@ -138,9 +138,11 @@ function updateSyncLabel() {
     pill.dataset.state = "preview";
     byId("syncStatus").textContent = "Preview data";
     byId("footerSync").textContent = "Preview network · sample content";
+    byId("droid").dataset.state = "preview";
     return;
   }
   pill.dataset.state = state.live ? "live" : "offline";
+  byId("droid").dataset.state = pill.dataset.state;
   const seconds = Math.round((Date.now() - state.lastSync) / 1000);
   const ago = seconds < 45 ? "just now" : seconds < 3600 ? `${Math.round(seconds / 60)} min ago` : `${Math.round(seconds / 3600)} h ago`;
   byId("syncStatus").textContent = state.live ? "Live" : "Reconnecting";
@@ -385,7 +387,38 @@ function jumpToRandomRecord() {
   for (let guard = 0; guard < 8 && records.length > 1 && recordHref(pick) === current; guard += 1) {
     pick = records[Math.floor(Math.random() * records.length)];
   }
+  droidReact("Locating a record at random.");
   navigate(recordHref(pick));
+}
+
+/* ───────── Probe droid ─────────
+ * A small mascot, not tied to any page's own render cycle, so it's wired once
+ * here rather than in afterRender(). Its eye colour is driven by updateSyncLabel()
+ * (see state.live handling above); everything else is just for charm. */
+const DROID_QUIPS = [
+  "Scanning for rebel activity.",
+  "This signal originates from a Sith temple.",
+  "Beep. Boop. Holocron located.",
+  "No lifeforms detected. Only records.",
+  "Transmitting coordinates to the Emperor.",
+  "Careful. Some holocrons bite back.",
+  "I have catalogued worse archives than this.",
+  "Do not touch the artefacts. I am watching.",
+];
+let droidBubbleTimer;
+function showDroidBubble(text) {
+  const bubble = byId("droidBubble");
+  bubble.textContent = text;
+  bubble.classList.add("show");
+  clearTimeout(droidBubbleTimer);
+  droidBubbleTimer = setTimeout(() => bubble.classList.remove("show"), 2600);
+}
+function droidReact(line) {
+  const droid = byId("droid");
+  droid.classList.remove("startled");
+  void droid.offsetWidth; // restart the animation even on rapid re-triggers
+  droid.classList.add("startled");
+  showDroidBubble(line || DROID_QUIPS[Math.floor(Math.random() * DROID_QUIPS.length)]);
 }
 const HERO_SIGIL = `<svg viewBox="-100 -100 200 200" aria-hidden="true">
   <g class="ring r1" stroke-width=".6"><circle r="96"/>${Array.from({ length: 72 }, (_, i) => { const a = (i / 72) * Math.PI * 2, r = i % 6 === 0 ? 86 : 91; return `<path d="M${(Math.cos(a) * r).toFixed(1)},${(Math.sin(a) * r).toFixed(1)} L${(Math.cos(a) * 96).toFixed(1)},${(Math.sin(a) * 96).toFixed(1)}"/>`; }).join("")}</g>
@@ -872,6 +905,7 @@ byId("menuToggle").addEventListener("click", () => { const open = byId("mainNav"
 byId("sectionsButton").addEventListener("click", () => { const open = byId("sectionsPopover").classList.toggle("open"); byId("sectionsButton").setAttribute("aria-expanded", String(open)); });
 byId("searchTrigger").addEventListener("click", () => openSearch());
 byId("randomButton").addEventListener("click", jumpToRandomRecord);
+byId("droid").addEventListener("click", () => droidReact());
 byId("closeSearch").addEventListener("click", closeSearch);
 byId("globalSearch").addEventListener("input", (event) => renderSearch(event.target.value));
 byId("globalSearch").addEventListener("keydown", (event) => {
