@@ -654,6 +654,67 @@ function recordRow(record, index = 0, hrefFn = recordHref) {
   </a>`;
 }
 
+/* Some leadership cards are a running succession record — a bold "**First
+ * Lord Commandant:**"-style heading followed by a flat "Key: Value" bullet
+ * list, repeated once per office-holder — rather than ordinary prose. Two or
+ * more of those headings is treated as a succession list and drawn as a
+ * timeline (see successionTimeline); anything else still goes through the
+ * regular markdown() renderer. Real Trello formatting is messy (a stray line
+ * that isn't a proper bullet, an accidentally-escaped "\-"), so a field with
+ * no value collects whatever non-field lines follow it as a sub-list rather
+ * than requiring clean bullets. */
+function parseSuccession(description = "") {
+  const lines = cleanText(description).split("\n");
+  const headingEra = (line) => {
+    const match = line.trim().match(/^\*\*(.+?)\*\*:?\s*$/);
+    return match ? match[1].replace(/:\s*$/, "").trim() : null;
+  };
+  const headings = [];
+  lines.forEach((line, index) => { const era = headingEra(line); if (era) headings.push({ era, index }); });
+  if (headings.length < 2) return null;
+
+  const preamble = markdown(lines.slice(0, headings[0].index).join("\n"));
+  const entries = headings.map((heading, i) => {
+    const end = i + 1 < headings.length ? headings[i + 1].index : lines.length;
+    const fields = [];
+    let listField = null;
+    for (let n = heading.index + 1; n < end; n += 1) {
+      const raw = lines[n].trim();
+      if (!raw) continue;
+      const text = raw.replace(/^[-*+]\s+/, "").replace(/^\\+-\s*/, "").trim();
+      const field = text.match(/^([A-Za-z][A-Za-z ]{0,40}):\s*(.*)$/);
+      if (field) {
+        const parsed = { key: field[1].trim(), value: field[2].trim(), items: null };
+        if (!parsed.value) parsed.items = [];
+        fields.push(parsed);
+        listField = parsed.items ? parsed : null;
+      } else if (listField) {
+        listField.items.push(text);
+      }
+    }
+    const pull = (key) => { const at = fields.findIndex((f) => f.key.toLowerCase() === key); return at < 0 ? null : fields.splice(at, 1)[0]; };
+    const name = pull("username");
+    const status = pull("status");
+    return { era: heading.era, name: name?.value || "", status: status?.value || "", fields };
+  });
+  return { preamble, entries };
+}
+function successionTimeline(entries) {
+  return `<div class="succession-timeline">${entries.map((entry, index) => `
+    <div class="succession-entry" data-reveal style="--d:${Math.min(index * 90, 480)}ms">
+      <span class="succession-dot" aria-hidden="true"></span>
+      <div class="succession-card">
+        <div class="succession-top">
+          <span class="succession-era">${escapeHtml(entry.era)}</span>
+          ${entry.status ? `<span class="succession-status${/active|current|serving/i.test(entry.status) ? " is-active" : ""}">${escapeHtml(entry.status)}</span>` : ""}
+        </div>
+        ${entry.name ? `<h3>${inline(entry.name)}</h3>` : ""}
+        ${entry.fields.length ? `<dl class="succession-fields">${entry.fields.map((field) => `<div><dt>${escapeHtml(field.key)}</dt><dd>${field.items ? (field.items.length > 1 ? `<ul>${field.items.map((item) => `<li>${inline(item)}</li>`).join("")}</ul>` : inline(field.items[0] || "")) : inline(field.value)}</dd></div>`).join("")}</dl>` : ""}
+      </div>
+    </div>`).join("")}
+  </div>`;
+}
+
 function renderRecord(record, options, nav = {}) {
   const crumb = nav.crumb || [{ href: link("/"), label: "Network" }];
   const groupHref = nav.groupHref || sectionHref;
@@ -672,9 +733,12 @@ function renderRecord(record, options, nav = {}) {
   // Images referenced inline in the description are rendered where they appear; anything
   // left over (plus the cover, if it was not referenced inline) is shown as the gallery.
   const inlineIds = new Set();
-  const body = record.description ? markdown(record.description, { record, shown: inlineIds, hero }) : "";
+  const succession = nav.succession ? parseSuccession(record.description) : null;
+  const body = succession
+    ? `${succession.preamble}${successionTimeline(succession.entries)}`
+    : record.description ? markdown(record.description, { record, shown: inlineIds, hero }) : "";
   const gallery = images.filter((image) => image.id !== hero?.id && !inlineIds.has(image.id));
-  const contents = headings.length > 1;
+  const contents = !succession && headings.length > 1;
   const meta = [record.code ? `Ref ${record.code}` : `Record ${pad(current + 1)} of ${pad(siblings.length)}`, record.description ? `${readingTime(record.description)} min read` : "", dateBadge(record)].filter(Boolean);
 
   app.innerHTML = `<article class="page article-page">
@@ -795,7 +859,7 @@ const leadershipFallback = {
   ]
 };
 const leadershipState = { board: null, signature: "", lastSync: 0, live: false };
-const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: link("/leadership"), label: "Leadership" }], groupHref: (section) => leadershipGroupHref(section), recordHrefFn: (record) => leadershipRecordHref(record) };
+const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: link("/leadership"), label: "Leadership" }], groupHref: (section) => leadershipGroupHref(section), recordHrefFn: (record) => leadershipRecordHref(record), succession: true };
 
 async function loadLeadershipBoard() {
   if (PREVIEW) return prepareBoard({ ...leadershipFallback, preview: true });

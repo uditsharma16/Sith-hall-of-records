@@ -355,6 +355,30 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .article-aside a:hover { color: var(--ink); }
 .article-aside a.active { color: var(--ink); transform: translateX(.2rem); }
 .article-aside a.active::before { transform: scaleY(1); }
+/* A leadership card written as a running succession record ("**First Lord
+ * Commandant:**" + a Key: Value bullet list, repeated per office-holder) is
+ * detected in app.js (parseSuccession) and drawn as this timeline instead of
+ * a plain bullet list. */
+.succession-timeline { position: relative; display: grid; gap: 1.5rem; margin: 1.6rem 0; padding-left: 1.8rem; }
+.succession-timeline::before { content: ""; position: absolute; left: .28rem; top: .4rem; bottom: .4rem; width: 2px; background: linear-gradient(var(--crimson), rgba(155,89,182,.15)); }
+.succession-entry { position: relative; }
+.succession-dot { position: absolute; left: -1.8rem; top: .4rem; width: .65rem; height: .65rem; border-radius: 50%; background: var(--crimson); box-shadow: 0 0 0 4px rgba(155,89,182,.16), 0 0 .8rem rgba(200,16,46,.55); }
+.succession-card { padding: 1.15rem 1.35rem; border: 1px solid rgba(155,89,182,.18); border-radius: 14px; background: var(--panel); box-shadow: 0 .6rem 1.6rem rgba(0,0,0,.35); }
+.succession-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; }
+.succession-era { color: var(--crimson); font: 500 .68rem var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.succession-status { flex: none; padding: .15rem .6rem; border: 1px solid var(--soft-line); border-radius: 999px; color: var(--faint); font: 500 .62rem var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.succession-status.is-active { color: #4fd88a; border-color: rgba(79,216,138,.4); background: rgba(79,216,138,.08); }
+.succession-card h3 { margin: .5rem 0 0; font: 400 1.35rem var(--display); color: var(--ink); }
+.succession-fields { margin: .8rem 0 0; display: grid; gap: .55rem; }
+.succession-fields > div { display: grid; grid-template-columns: 8.5rem 1fr; gap: .4rem 1rem; }
+.succession-fields dt { color: var(--faint); font: 500 .64rem var(--mono); letter-spacing: .08em; text-transform: uppercase; padding-top: .2rem; }
+.succession-fields dd { margin: 0; color: var(--text); font-size: .98rem; line-height: 1.5; }
+.succession-fields ul { margin: 0; padding-left: 1.1rem; }
+.succession-fields li { margin: .15rem 0; }
+@media (max-width: 640px) {
+  .succession-fields > div { grid-template-columns: 1fr; gap: .15rem; }
+}
+
 .ledger { width: min(54rem, 100%); margin: 2.4rem auto 0; display: grid; gap: 1rem; }
 .ledger-block { padding: 1.2rem 1.4rem; border: 1px solid rgba(155,89,182,.18); border-radius: 12px; background: var(--panel); box-shadow: 0 .6rem 1.6rem rgba(0,0,0,.4); }
 .ledger-block h3 { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: 0 0 .7rem; font: 400 1.05rem var(--display); color: var(--ink); }
