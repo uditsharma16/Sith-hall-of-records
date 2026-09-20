@@ -949,8 +949,12 @@ function leadershipPriorityRank(name = "") {
   const office = LEADERSHIP_OFFICES.find(({ match }) => new RegExp(`\\b${match.replace(/ /g, "\\s+")}\\b`).test(normalised));
   return office ? office.rank : LEADERSHIP_OFFICES.length;
 }
+/* The "Leadership Records" list itself is the board's own meta/admin notes
+ * (who set the board up, helpers, etc.) rather than an actual seat of the
+ * Order, so it's dropped from the Leadership page entirely. */
 function orderLeadershipLists(board) {
-  const ordered = board.lists
+  const lists = board.lists.filter((list) => !/\bleadership\s+records\b/i.test(list.name));
+  const ordered = lists
     .map((list, index) => ({ list, index }))
     .sort((a, b) => leadershipPriorityRank(a.list.name) - leadershipPriorityRank(b.list.name) || a.index - b.index)
     .map((entry) => entry.list);
@@ -1016,7 +1020,8 @@ function renderLeadershipHome(options) {
       <img class="leadership-guard is-left" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
       <img class="leadership-guard is-right" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
       <div class="leadership-hero-copy">
-        <h1 class="eyebrow">The Sith Order</h1>
+        <div class="eyebrow">The Sith Order</div>
+        <h1 class="awards-title">Leadership Records</h1>
         <p class="awards-lead">${escapeHtml(board.description || "The ranking officers of the Order, and the seats they hold.")}</p>
         <p class="awards-static-note">◆ ${leadershipState.live ? "Live · synced with Trello" : "Reconnecting to Trello…"}</p>
       </div>
@@ -1027,7 +1032,7 @@ function renderLeadershipHome(options) {
       ${singleGroupBody}
     </section>` : `
     <div class="rule"><i></i>Seats of the order<i></i></div>
-    <section class="section-index" aria-label="Leadership groups">
+    <section class="section-index leadership-seats" aria-label="Leadership groups">
       ${groups.map((section, index) => `<a class="holo" href="${leadershipGroupHref(section)}" data-link data-reveal style="--d:${Math.min(index * 70, 420)}ms">
         ${glyph(section.id + section.name)}
         <div class="holo-top"><span>Seat ${roman(index + 1)}</span><span>${plural(section.cards.length, "record")}</span></div>

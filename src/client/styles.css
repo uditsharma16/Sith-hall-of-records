@@ -459,6 +459,20 @@ a.succession-card:hover h3 { color: var(--crimson-deep); }
   .leadership-hero-copy { background: none; }
 }
 
+/* The top two seats (Emperor, Dark Regent — whichever ranks lowest per
+ * leadershipPriorityRank in app.js) get a wide first row to themselves;
+ * everything after falls into an ordinary 3-up grid. */
+.leadership-seats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.1rem; }
+.leadership-seats .holo:nth-child(-n+2) { grid-column: span 3; }
+.leadership-seats .holo:nth-child(n+3) { grid-column: span 2; }
+@media (max-width: 900px) {
+  .leadership-seats { grid-template-columns: repeat(2, 1fr); }
+  .leadership-seats .holo { grid-column: span 1; }
+}
+@media (max-width: 560px) {
+  .leadership-seats { grid-template-columns: 1fr; }
+}
+
 /* ───────── Misc ───────── */
 .empty-page { padding: 8rem var(--gutter); text-align: center; color: var(--muted); display: grid; justify-items: center; gap: 1rem; }
 .empty-page h1 { margin: 0; color: var(--ink); font: 400 clamp(2rem, 5vw, 3.2rem) var(--display); }
