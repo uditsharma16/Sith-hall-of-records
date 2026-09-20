@@ -1016,16 +1016,10 @@ function renderLeadershipHome(options) {
     : "";
   app.innerHTML = `<div class="page leadership-page">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><span>Leadership</span></nav>
-    <div class="leadership-hero">
-      <img class="leadership-guard is-left" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
-      <img class="leadership-guard is-right" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
-      <div class="leadership-hero-copy">
-        <div class="eyebrow">The Sith Order</div>
-        <h1 class="awards-title">Leadership Records</h1>
-        <p class="awards-lead">${escapeHtml(board.description || "The ranking officers of the Order, and the seats they hold.")}</p>
-        <p class="awards-static-note">◆ ${leadershipState.live ? "Live · synced with Trello" : "Reconnecting to Trello…"}</p>
-      </div>
-    </div>
+    <div class="eyebrow">The Sith Order</div>
+    <h1 class="awards-title">Leadership Records</h1>
+    <p class="awards-lead">${escapeHtml(board.description || "The ranking officers of the Order, and the seats they hold.")}</p>
+    <p class="awards-static-note">◆ ${leadershipState.live ? "Live · synced with Trello" : "Reconnecting to Trello…"}</p>
     ${singleGroup ? `
     <div class="rule"><i></i>${escapeHtml(singleGroup.name)}<i></i></div>
     <section class="${singleGroupTimeline ? "succession-section" : "record-list"}" aria-label="${escapeAttr(singleGroup.name)}">
