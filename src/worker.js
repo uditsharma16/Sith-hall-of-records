@@ -1,5 +1,7 @@
-const BOARD_SHORTLINK = "GtiwT003";
-const TRELLO_EXPORT = `https://trello.com/b/${BOARD_SHORTLINK}.json`;
+const BOARDS = {
+  network: { shortlink: "GtiwT003", envKey: "TRELLO_EXPORT_URL" },
+  leadership: { shortlink: "fi7Vd2Dx", envKey: "TRELLO_LEADERSHIP_EXPORT_URL" }
+};
 const USER_AGENT = "TSO-Holocron-Network/1.0";
 
 export default {
@@ -7,9 +9,10 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/api/board") {
+      const boardKey = BOARDS[url.searchParams.get("board")] ? url.searchParams.get("board") : "network";
       try {
-        const board = await fetchBoard(env);
-        return Response.json(normaliseBoard(board), {
+        const board = await fetchBoard(env, boardKey);
+        return Response.json(normaliseBoard(board, boardKey), {
           headers: { "Cache-Control": "public, max-age=60, s-maxage=90" }
         });
       } catch (error) {
@@ -23,11 +26,12 @@ export default {
 
     if (url.pathname === "/api/media") {
       try {
+        const boardKey = BOARDS[url.searchParams.get("board")] ? url.searchParams.get("board") : "network";
         const cardId = url.searchParams.get("card");
         const attachmentId = url.searchParams.get("attachment");
         if (!cardId || !attachmentId) return new Response("Missing media reference", { status: 400 });
 
-        const board = await fetchBoard(env);
+        const board = await fetchBoard(env, boardKey);
         const card = (board.cards || []).find((item) => item.id === cardId && !item.closed);
         const attachment = card?.attachments?.find((item) => item.id === attachmentId);
         if (!attachment || !isImage(attachment)) return new Response("Image not found", { status: 404 });
@@ -63,10 +67,12 @@ export default {
   }
 };
 
-/* TRELLO_EXPORT_URL is only for local development: it lets `wrangler dev` read a saved
- * copy of the board from any URL. Production always reads the live Trello export. */
-async function fetchBoard(env = {}) {
-  const source = env.TRELLO_EXPORT_URL || TRELLO_EXPORT;
+/* TRELLO_EXPORT_URL / TRELLO_LEADERSHIP_EXPORT_URL are only for local development: they let
+ * `wrangler dev` read a saved copy of a board from any URL. Production always reads the
+ * live Trello export for whichever board was asked for. */
+async function fetchBoard(env = {}, boardKey = "network") {
+  const board = BOARDS[boardKey] || BOARDS.network;
+  const source = env[board.envKey] || `https://trello.com/b/${board.shortlink}.json`;
   const response = await fetch(source, {
     headers: { "User-Agent": USER_AGENT },
     cf: { cacheTtl: 90, cacheEverything: true }
@@ -83,7 +89,7 @@ function isImage(attachment) {
 
 const byPos = (a, b) => (a.pos || 0) - (b.pos || 0);
 
-function normaliseBoard(board) {
+function normaliseBoard(board, boardKey = "network") {
   const members = new Map((board.members || []).map((member) => [member.id, {
     id: member.id,
     name: member.fullName || member.username || "",
@@ -132,7 +138,7 @@ function normaliseBoard(board) {
             mimeType: attachment.mimeType,
             isImage: isImage(attachment),
             imageUrl: isImage(attachment)
-              ? `/api/media?card=${encodeURIComponent(card.id)}&attachment=${encodeURIComponent(attachment.id)}`
+              ? `/api/media?board=${boardKey}&card=${encodeURIComponent(card.id)}&attachment=${encodeURIComponent(attachment.id)}`
               : ""
           })),
           coverAttachmentId: card.cover?.idAttachment || "",

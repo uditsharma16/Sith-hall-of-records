@@ -407,6 +407,20 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
   .award-row { grid-template-columns: 1fr; gap: .3rem; }
 }
 
+/* ───────── Leadership page ─────────
+ * Reads a second, independently-live Trello board — see leadershipState in
+ * app.js. Two guard renders flank the hero as sentries; they fade out on
+ * narrower screens rather than crowding the title. */
+.leadership-hero { position: relative; padding-block: 1rem 1.5rem; overflow: visible; text-align: center; }
+.leadership-hero-copy { position: relative; z-index: 1; max-width: 30rem; margin-inline: auto; }
+.leadership-hero .awards-lead { margin-inline: auto; }
+.leadership-guard { position: absolute; z-index: 0; top: 50%; width: clamp(140px, 14vw, 220px); height: auto; opacity: .92; pointer-events: none; filter: drop-shadow(0 1.4rem 2.2rem rgba(0,0,0,.55)); }
+.leadership-guard.is-left { left: clamp(0px, 6vw, 4rem); transform: translateY(-50%); }
+.leadership-guard.is-right { right: clamp(0px, 6vw, 4rem); transform: translateY(-50%) scaleX(-1); }
+@media (max-width: 980px) {
+  .leadership-guard { display: none; }
+}
+
 /* ───────── Misc ───────── */
 .empty-page { padding: 8rem var(--gutter); text-align: center; color: var(--muted); display: grid; justify-items: center; gap: 1rem; }
 .empty-page h1 { margin: 0; color: var(--ink); font: 400 clamp(2rem, 5vw, 3.2rem) var(--display); }

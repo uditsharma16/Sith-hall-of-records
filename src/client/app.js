@@ -98,11 +98,13 @@ async function start() {
   }
   state.signature = signatureOf(state.board);
   state.lastSync = Date.now();
+  await startLeadership();
   renderMenus();
   route();
   updateSyncLabel();
   if (!PREVIEW) {
     setInterval(refresh, POLL_MS);
+    setInterval(refreshLeadership, POLL_MS);
     document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - state.lastSync > 20_000) refresh(); });
   }
   setInterval(updateSyncLabel, 10_000);
@@ -241,6 +243,19 @@ function route(options = {}) {
       return record ? renderRecord(record, options) : renderNotFound();
     }
     if (parts[0] === "awards") return renderAwards(options);
+    if (parts[0] === "leadership") {
+      if (!leadershipState.board) return renderNotFound();
+      if (parts.length === 1) return renderLeadershipHome(options);
+      if (parts[1] === "group") {
+        const section = leadershipState.board.lists.find((item) => slug(item.name) === parts[2]);
+        return section ? renderLeadershipGroup(section, options) : renderNotFound();
+      }
+      if (parts[1] === "record") {
+        const record = allLeadershipRecords().find((item) => item.id === decodeURIComponent(parts[2] || ""));
+        return record ? renderRecord(record, options, LEADERSHIP_NAV) : renderNotFound();
+      }
+      return renderNotFound();
+    }
     renderNotFound();
   };
   if (document.startViewTransition && !reducedMotion.matches && !options.instant && !document.hidden) {
@@ -256,7 +271,7 @@ function navigate(href) {
   if (isRecordPath(path) && !reducedMotion.matches && !warping) hyperspaceJump(perform);
   else perform();
 }
-const isRecordPath = (path) => path.split("/").filter(Boolean)[0] === "record";
+const isRecordPath = (path) => { const parts = path.split("/").filter(Boolean); return parts[0] === "record" || (parts[0] === "leadership" && parts[1] === "record"); };
 
 /* A Star Wars-flavoured way to arrive at a holocron, hand-timed in beats rather
  * than one automatic cross-fade:
@@ -622,7 +637,7 @@ function renderSection(section, options) {
   afterRender(options);
 }
 
-function recordRow(record, index = 0) {
+function recordRow(record, index = 0, hrefFn = recordHref) {
   const image = primaryImage(record);
   const text = escapeAttr(`${record.name} ${stripMarkdown(record.description)}`.toLowerCase());
   const number = record.code ? `<span class="record-num is-code">${escapeHtml(record.code)}</span>` : `<span class="record-num">${pad(index + 1)}</span>`;
@@ -631,7 +646,7 @@ function recordRow(record, index = 0) {
       ${number}<div><h2>${escapeHtml(record.title)}</h2>${chips(record)}</div>
     </div>`;
   }
-  return `<a class="record-row" href="${recordHref(record)}" data-link data-reveal data-seed="${escapeAttr(record.id)}" data-text="${text}" style="--d:${Math.min(index * 50, 300)}ms">
+  return `<a class="record-row" href="${hrefFn(record)}" data-link data-reveal data-seed="${escapeAttr(record.id)}" data-text="${text}" style="--d:${Math.min(index * 50, 300)}ms">
     ${number}
     <div><h2>${escapeHtml(record.title)}</h2><p>${escapeHtml(excerpt(record))}</p>${chips(record)}</div>
     ${image ? `<div class="record-image"><img src="${escapeAttr(image.imageUrl)}" alt="${escapeAttr(image.name || record.name)}" loading="lazy" /></div>` : `<div class="record-image is-glyph">${glyph(record.id)}</div>`}
@@ -639,7 +654,10 @@ function recordRow(record, index = 0) {
   </a>`;
 }
 
-function renderRecord(record, options) {
+function renderRecord(record, options, nav = {}) {
+  const crumb = nav.crumb || [{ href: link("/"), label: "Network" }];
+  const groupHref = nav.groupHref || sectionHref;
+  const recordHrefFn = nav.recordHrefFn || recordHref;
   document.title = `${record.name} — TSO Holocron Network`;
   const images = imageAttachments(record);
   const hero = primaryImage(record);
@@ -660,7 +678,7 @@ function renderRecord(record, options) {
   const meta = [record.code ? `Ref ${record.code}` : `Record ${pad(current + 1)} of ${pad(siblings.length)}`, record.description ? `${readingTime(record.description)} min read` : "", dateBadge(record)].filter(Boolean);
 
   app.innerHTML = `<article class="page article-page">
-    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><a href="${sectionHref(record.section)}" data-link>${escapeHtml(record.section.name)}</a><span aria-hidden="true">◆</span><span>${escapeHtml(record.title)}</span></nav>
+    <nav class="breadcrumb" aria-label="Breadcrumb">${crumb.map((item) => `<a href="${item.href}" data-link>${escapeHtml(item.label)}</a><span aria-hidden="true">◆</span>`).join("")}<a href="${groupHref(record.section)}" data-link>${escapeHtml(record.section.name)}</a><span aria-hidden="true">◆</span><span>${escapeHtml(record.title)}</span></nav>
     <header class="article-header">
       <div class="eyebrow">${escapeHtml(record.section.name)}</div>
       <h1>${escapeHtml(record.title)}</h1>
@@ -674,7 +692,7 @@ function renderRecord(record, options) {
     ${ledger(record)}
     ${gallery.length ? `<div class="rule"><i></i>Holocron imagery<i></i></div><section class="gallery" aria-label="Record images">${gallery.map((image) => figure(image, true)).join("")}</section>` : ""}
     ${documents.length || record.url ? `<div class="rule"><i></i>References<i></i></div><section class="attachments"><div class="attachment-links">${documents.map((item) => `<a href="${safeUrl(item.url)}" target="_blank" rel="noopener">${escapeHtml(item.name || "Attachment")} ↗</a>`).join("")}${record.url ? `<a href="${safeUrl(record.url)}" target="_blank" rel="noopener">View source card ↗</a>` : ""}</div></section>` : ""}
-    ${(previous || next) ? `<nav class="next-record" aria-label="Adjacent records">${previous ? `<a href="${recordHref(previous)}" data-link><small>← Previous</small><span>${recordLabel(previous)}</span></a>` : ""}${next ? `<a class="next" href="${recordHref(next)}" data-link><small>Next →</small><span>${recordLabel(next)}</span></a>` : ""}</nav>` : ""}
+    ${(previous || next) ? `<nav class="next-record" aria-label="Adjacent records">${previous ? `<a href="${recordHrefFn(previous)}" data-link><small>← Previous</small><span>${recordLabel(previous)}</span></a>` : ""}${next ? `<a class="next" href="${recordHrefFn(next)}" data-link><small>Next →</small><span>${recordLabel(next)}</span></a>` : ""}</nav>` : ""}
   </article>`;
   afterRender(options);
   if (contents) spyHeadings();
@@ -759,6 +777,132 @@ function renderAwards(options) {
       }).join("")}
     </section>
   </div>`;
+  afterRender(options);
+}
+
+/* ───────── Leadership (a second, independently-live Trello board) ─────────
+ * Same shape as the network board (lists of cards), fetched from its own
+ * endpoint and polled on its own cycle, but browsed under /leadership so it
+ * never collides with the main network's /vault and /record routes. */
+const leadershipFallback = {
+  ok: true,
+  name: "TSO Leadership Records",
+  description: "The ranking officers of the Sith Order, and the seats they hold.",
+  lists: [
+    { id: "ldr-council", name: "The Dark Council", cards: [
+      { id: "ldr-sample", name: "Seat of the Sword", description: "Held by the Order's foremost warrior.", labels: [], attachments: [], members: [], checklists: [] }
+    ]}
+  ]
+};
+const leadershipState = { board: null, signature: "", lastSync: 0, live: false };
+const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: link("/leadership"), label: "Leadership" }], groupHref: (section) => leadershipGroupHref(section), recordHrefFn: (record) => leadershipRecordHref(record) };
+
+async function loadLeadershipBoard() {
+  if (PREVIEW) return prepareBoard({ ...leadershipFallback, preview: true });
+  const response = await fetch("/api/board?board=leadership", { cache: "no-store" });
+  if (!response.ok) throw new Error("Leadership board unavailable");
+  const board = await response.json();
+  if (!board.ok || !Array.isArray(board.lists)) throw new Error("Leadership board unavailable");
+  return prepareBoard(board);
+}
+async function startLeadership() {
+  try {
+    leadershipState.board = await loadLeadershipBoard();
+    leadershipState.live = !leadershipState.board.preview;
+  } catch {
+    leadershipState.board = prepareBoard(leadershipFallback);
+    leadershipState.live = false;
+  }
+  leadershipState.signature = signatureOf(leadershipState.board);
+  leadershipState.lastSync = Date.now();
+}
+async function refreshLeadership() {
+  if (document.hidden || PREVIEW) return;
+  try {
+    const next = await loadLeadershipBoard();
+    const signature = signatureOf(next);
+    leadershipState.lastSync = Date.now();
+    const changed = signature !== leadershipState.signature;
+    leadershipState.live = true;
+    if (changed) {
+      leadershipState.board = next;
+      leadershipState.signature = signature;
+      if (currentPath().split("/").filter(Boolean)[0] === "leadership") route({ preserveScroll: true, instant: true });
+    }
+  } catch {
+    leadershipState.live = false;
+  }
+}
+function allLeadershipRecords() {
+  return (leadershipState.board?.lists || []).flatMap((section, sectionIndex) => section.cards.map((record, recordIndex) => ({ ...record, section, sectionIndex, recordIndex })));
+}
+function leadershipGroupHref(section) { return link(`/leadership/group/${slug(section.name)}`); }
+function leadershipRecordHref(record) { return link(`/leadership/record/${encodeURIComponent(record.id)}/${slug(record.name)}`); }
+
+function renderLeadershipHome(options) {
+  const board = leadershipState.board;
+  document.title = `${board.name || "Leadership"} — TSO Holocron Network`;
+  const groups = board.lists;
+  const singleGroup = groups.length === 1 ? groups[0] : null;
+  app.innerHTML = `<div class="page leadership-page">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><span>Leadership</span></nav>
+    <div class="leadership-hero">
+      <img class="leadership-guard is-left" src="/guard.webp" alt="" aria-hidden="true" />
+      <img class="leadership-guard is-right" src="/guard.webp" alt="" aria-hidden="true" />
+      <div class="leadership-hero-copy">
+        <div class="eyebrow">The Sith Order</div>
+        <h1 class="awards-title">Leadership Records</h1>
+        <p class="awards-lead">${escapeHtml(board.description || "The ranking officers of the Order, and the seats they hold.")}</p>
+        <p class="awards-static-note">◆ ${leadershipState.live ? "Live · synced with Trello" : "Reconnecting to Trello…"}</p>
+      </div>
+    </div>
+    ${singleGroup ? `
+    <div class="rule"><i></i>${escapeHtml(singleGroup.name)}<i></i></div>
+    <section class="record-list" aria-label="${escapeAttr(singleGroup.name)}">
+      ${singleGroup.cards.length ? singleGroup.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No leaders are currently filed here.</p>`}
+    </section>` : `
+    <div class="rule"><i></i>Seats of the order<i></i></div>
+    <section class="section-index" aria-label="Leadership groups">
+      ${groups.map((section, index) => `<a class="holo" href="${leadershipGroupHref(section)}" data-link data-reveal style="--d:${Math.min(index * 70, 420)}ms">
+        ${glyph(section.id + section.name)}
+        <div class="holo-top"><span>Seat ${roman(index + 1)}</span><span>${plural(section.cards.length, "record")}</span></div>
+        <h2>${escapeHtml(section.name)}</h2>
+        ${section.tagline ? `<p class="holo-tagline">${escapeHtml(section.tagline)}</p>` : ""}
+        ${section.cards.length ? `<ul>${section.cards.slice(0, 3).map((record) => `<li>${recordLabel(record)}</li>`).join("")}</ul>` : `<ul><li>Awaiting records</li></ul>`}
+        <span class="holo-arrow" aria-hidden="true">→</span>
+      </a>`).join("")}
+    </section>`}
+  </div>`;
+  afterRender(options);
+}
+
+function renderLeadershipGroup(section, options) {
+  document.title = `${section.name} — TSO Holocron Network`;
+  const index = leadershipState.board.lists.indexOf(section);
+  const filterable = section.cards.filter((record) => !record.titleOnly).length > 3;
+  app.innerHTML = `<div class="page">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><a href="${link("/leadership")}" data-link>Leadership</a><span aria-hidden="true">◆</span><span>${escapeHtml(section.name)}</span></nav>
+    <header class="section-header${section.art ? " has-art" : ""}">
+      ${section.art ? `<img class="section-art" src="${escapeAttr(section.art.imageUrl)}" alt="" />` : glyph(section.id + section.name)}
+      <div class="eyebrow">Seat ${roman(index + 1)}</div>
+      <h1>${escapeHtml(section.name)}</h1>
+      ${section.tagline ? `<p class="section-tagline">${escapeHtml(section.tagline)}</p>` : ""}
+      <div class="section-tools">
+        <span id="sectionCount">${plural(section.cards.length, "record")} on file</span>
+        ${filterable ? `<label class="filter">${SEARCH_ICON}<input id="sectionFilter" type="search" placeholder="Filter this seat…" autocomplete="off" aria-label="Filter records in this seat" /></label>` : ""}
+      </div>
+    </header>
+    <section class="record-list" id="recordList" aria-label="Records in ${escapeAttr(section.name)}">
+      ${section.cards.length ? section.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No records are currently filed in this seat.</p>`}
+      <p class="no-match" id="noMatch" hidden>No records in this seat match that filter.</p>
+    </section>
+  </div>`;
+  byId("sectionFilter")?.addEventListener("input", (event) => {
+    const value = event.target.value.trim().toLowerCase(); let shown = 0;
+    app.querySelectorAll(".record-row").forEach((row) => { const hit = !value || row.dataset.text.includes(value); row.hidden = !hit; if (hit) shown += 1; });
+    byId("noMatch").hidden = shown > 0;
+    byId("sectionCount").textContent = value ? `${shown} of ${plural(section.cards.length, "record")}` : `${plural(section.cards.length, "record")} on file`;
+  });
   afterRender(options);
 }
 
