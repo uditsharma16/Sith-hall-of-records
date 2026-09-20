@@ -982,8 +982,8 @@ function renderLeadershipHome(options) {
   app.innerHTML = `<div class="page leadership-page">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><span>Leadership</span></nav>
     <div class="leadership-hero">
-      <img class="leadership-guard is-left" src="/guard-left.webp" alt="" aria-hidden="true" />
-      <img class="leadership-guard is-right" src="/guard-right.webp" alt="" aria-hidden="true" />
+      <img class="leadership-guard is-left" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
+      <img class="leadership-guard is-right" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
       <div class="leadership-hero-copy">
         <div class="eyebrow">The Sith Order</div>
         <h1 class="awards-title">Leadership Records</h1>
