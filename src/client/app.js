@@ -817,14 +817,16 @@ function renderRecord(record, options, nav = {}) {
   const contents = !succession && headings.length > 1;
   const meta = [record.code ? `Ref ${record.code}` : `Record ${pad(current + 1)} of ${pad(siblings.length)}`, record.description ? `${readingTime(record.description)} min read` : "", dateBadge(record)].filter(Boolean);
 
-  app.innerHTML = `<article class="page article-page">
-    <nav class="breadcrumb" aria-label="Breadcrumb">${crumb.map((item) => `<a href="${item.href}" data-link>${escapeHtml(item.label)}</a><span aria-hidden="true">◆</span>`).join("")}<a href="${groupHref(record.section)}" data-link>${escapeHtml(record.section.name)}</a><span aria-hidden="true">◆</span><span>${escapeHtml(record.title)}</span></nav>
-    <header class="article-header">
+  const headerCopy = `<div class="article-header-copy">
       <div class="eyebrow">${escapeHtml(record.section.name)}</div>
       <h1>${escapeHtml(record.title)}</h1>
       <div class="article-meta">${meta.map((item) => `<span>${item}</span>`).join("")}${chips(record)}${keepers(record)}</div>
-    </header>
-    ${hero ? `<div class="hero-media">${figure(hero, false)}</div>` : ""}
+    </div>`;
+  app.innerHTML = `<article class="page article-page">
+    <nav class="breadcrumb" aria-label="Breadcrumb">${crumb.map((item) => `<a href="${item.href}" data-link>${escapeHtml(item.label)}</a><span aria-hidden="true">◆</span>`).join("")}<a href="${groupHref(record.section)}" data-link>${escapeHtml(record.section.name)}</a><span aria-hidden="true">◆</span><span>${escapeHtml(record.title)}</span></nav>
+    ${nav.compactHero
+      ? `<header class="article-header article-header-compact">${headerCopy}${hero ? `<div class="article-header-portrait">${figure(hero, false)}</div>` : ""}</header>`
+      : `<header class="article-header">${headerCopy}</header>${hero ? `<div class="hero-media">${figure(hero, false)}</div>` : ""}`}
     <div class="article-layout${contents ? " has-contents" : ""}">
       <div class="prose">${body || `<p class="notice">${images.length ? "This holocron is illustrated only; no written record has been filed with it." : "No written record has been filed under this holocron yet."}</p>`}</div>
       ${contents ? `<aside class="article-aside" aria-label="In this record"><strong>In this record</strong>${headings.map((heading) => `<a href="#${heading.id}" data-scroll class="${heading.level === 3 ? "sub" : ""}">${escapeHtml(heading.text)}</a>`).join("")}</aside>` : ""}
@@ -935,7 +937,7 @@ const leadershipFallback = {
   ]
 };
 const leadershipState = { board: null, signature: "", lastSync: 0, live: false };
-const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: link("/leadership"), label: "Leadership" }], groupHref: (section) => leadershipGroupHref(section), recordHrefFn: (record) => leadershipRecordHref(record), succession: true };
+const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: link("/leadership"), label: "Leadership" }], groupHref: (section) => leadershipGroupHref(section), recordHrefFn: (record) => leadershipRecordHref(record), succession: true, compactHero: true };
 
 /* The Order's ruling seats should always lead the Leadership page, ahead of
  * the Dark Council's various spheres (Sphere of Galactic Influence, Sphere
