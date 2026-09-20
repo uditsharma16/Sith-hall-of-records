@@ -741,7 +741,7 @@ function isOfficeGroup(name = "") {
 function successionFromGroup(section) {
   if (!isOfficeGroup(section.name)) return null;
   const records = section.cards.filter((record) => !record.titleOnly);
-  if (records.length < 2) return null;
+  if (!records.length) return null;
   let matched = 0;
   const entries = records.map((record, index) => {
     const fields = parseFieldLines(cleanText(record.description).split("\n"));
@@ -757,7 +757,12 @@ function successionFromGroup(section) {
       href: leadershipRecordHref(record)
     };
   });
-  return matched >= 2 ? entries : null;
+  // A single-holder office (e.g. a seat that's only ever had one Dark Regent)
+  // still needs just that one card to parse; a multi-card group only switches
+  // to the timeline once at least two cards actually parse into fields, so a
+  // group that merely shares a name with an office but holds ordinary prose
+  // records still falls back to the normal flat roster.
+  return matched >= Math.min(2, records.length) ? entries : null;
 }
 
 function successionTimeline(entries) {
