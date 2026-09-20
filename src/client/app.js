@@ -724,16 +724,6 @@ function renderAwards(options) {
     ? awards.map((award) => ({ award, entry: award.history.find((h) => h.key === latestKey && h.status === "awarded") })).filter((x) => x.entry)
     : [];
 
-  const ceremonyMonths = new Set();
-  const tally = new Map();
-  awards.forEach((award) => award.history.forEach((h) => {
-    if (h.status === "awarded") {
-      ceremonyMonths.add(h.key);
-      h.winners.forEach((w) => tally.set(w, (tally.get(w) || 0) + 1));
-    }
-  }));
-  const topCount = tally.size ? Math.max(...tally.values()) : 0;
-  const topNames = [...tally.entries()].filter(([, c]) => c === topCount).map(([name]) => name);
   const chips = (names) => `<div class="winner-chips">${names.map((name) => `<span class="winner-chip">${escapeHtml(name)}</span>`).join("")}</div>`;
 
   app.innerHTML = `<div class="page">
@@ -742,12 +732,6 @@ function renderAwards(options) {
     <h1 class="awards-title">Award Ceremony</h1>
     <p class="awards-lead">A record of every ceremony held by the Order, and who was named at each one.</p>
     <p class="awards-static-note">◆ Static data from an uploaded ceremony log — a live sheet will replace it once it's ready.</p>
-
-    <section class="awards-stats" aria-label="Ceremony statistics">
-      <div class="stat-tile"><strong>${ceremonyMonths.size}</strong><span>Ceremonies on record</span></div>
-      <div class="stat-tile"><strong>${awards.length}</strong><span>Award categories</span></div>
-      <div class="stat-tile"><strong>${topNames.length ? escapeHtml(topNames.slice(0, 2).join(", ")) + (topNames.length > 2 ? ` +${topNames.length - 2}` : "") : "—"}</strong><span>${topCount ? `Most decorated · ${topCount} win${topCount === 1 ? "" : "s"}` : "Most decorated"}</span></div>
-    </section>
 
     ${ceremony.length ? `<div class="rule"><i></i>Most recent ceremony<i></i></div>
     <div class="ceremony-spotlight" data-reveal>
