@@ -414,7 +414,10 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .leadership-hero { position: relative; padding-block: 1rem 1.5rem; overflow: visible; text-align: center; }
 .leadership-hero-copy { position: relative; z-index: 1; max-width: 30rem; margin-inline: auto; }
 .leadership-hero .awards-lead { margin-inline: auto; }
-.leadership-guard { position: absolute; z-index: 0; top: 50%; width: clamp(140px, 14vw, 220px); height: auto; opacity: .92; pointer-events: none; filter: drop-shadow(0 1.4rem 2.2rem rgba(0,0,0,.55)); }
+/* Sized by height, not width: the two renders crop to the same character
+ * height but different canvas widths (one saber juts out further sideways),
+ * so a shared width would make that one read as the smaller guard. */
+.leadership-guard { position: absolute; z-index: 0; top: 50%; height: clamp(150px, 15vw, 235px); width: auto; opacity: .92; pointer-events: none; filter: drop-shadow(0 1.4rem 2.2rem rgba(0,0,0,.55)); }
 .leadership-guard.is-left { left: clamp(0px, 6vw, 4rem); transform: translateY(-50%); }
 .leadership-guard.is-right { right: clamp(0px, 6vw, 4rem); transform: translateY(-50%); }
 @media (max-width: 980px) {
