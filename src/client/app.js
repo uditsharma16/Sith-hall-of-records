@@ -240,6 +240,7 @@ function route(options = {}) {
       const record = allRecords().find((item) => item.id === decodeURIComponent(parts[1] || ""));
       return record ? renderRecord(record, options) : renderNotFound();
     }
+    if (parts[0] === "awards") return renderAwards(options);
     renderNotFound();
   };
   if (document.startViewTransition && !reducedMotion.matches && !options.instant && !document.hidden) {
@@ -707,6 +708,74 @@ function ledger(record) {
  * "holocron.png") is metadata, not a caption anyone wrote on purpose, so it is
  * never shown on the page — this is only read by screen readers. */
 function captionOf(record) { return record.title; }
+
+/* The award ceremony page reads a flat, hand-maintained AWARDS_DATA (see
+ * awards-data.js) rather than the live Trello board — it's a placeholder until
+ * a live sheet replaces it, per the source spreadsheet. */
+function renderAwards(options) {
+  document.title = "Award Ceremony — TSO Holocron Network";
+  const awards = typeof AWARDS_DATA !== "undefined" ? AWARDS_DATA : [];
+  const latestKey = awards.reduce((latest, award) => {
+    const hit = award.history.filter((h) => h.status === "awarded").at(-1);
+    return hit && hit.key > latest ? hit.key : latest;
+  }, "");
+  const latestLabel = latestKey && awards.flatMap((a) => a.history).find((h) => h.key === latestKey)?.label;
+  const ceremony = latestKey
+    ? awards.map((award) => ({ award, entry: award.history.find((h) => h.key === latestKey && h.status === "awarded") })).filter((x) => x.entry)
+    : [];
+
+  const ceremonyMonths = new Set();
+  const tally = new Map();
+  awards.forEach((award) => award.history.forEach((h) => {
+    if (h.status === "awarded") {
+      ceremonyMonths.add(h.key);
+      h.winners.forEach((w) => tally.set(w, (tally.get(w) || 0) + 1));
+    }
+  }));
+  const topCount = tally.size ? Math.max(...tally.values()) : 0;
+  const topNames = [...tally.entries()].filter(([, c]) => c === topCount).map(([name]) => name);
+  const chips = (names) => `<div class="winner-chips">${names.map((name) => `<span class="winner-chip">${escapeHtml(name)}</span>`).join("")}</div>`;
+
+  app.innerHTML = `<div class="page">
+    <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><span>Award Ceremony</span></nav>
+    <div class="eyebrow">The Sith Order</div>
+    <h1 class="awards-title">Award Ceremony</h1>
+    <p class="awards-lead">A record of every ceremony held by the Order, and who was named at each one.</p>
+    <p class="awards-static-note">◆ Static data from an uploaded ceremony log — a live sheet will replace it once it's ready.</p>
+
+    <section class="awards-stats" aria-label="Ceremony statistics">
+      <div class="stat-tile"><strong>${ceremonyMonths.size}</strong><span>Ceremonies on record</span></div>
+      <div class="stat-tile"><strong>${awards.length}</strong><span>Award categories</span></div>
+      <div class="stat-tile"><strong>${topNames.length ? escapeHtml(topNames.slice(0, 2).join(", ")) + (topNames.length > 2 ? ` +${topNames.length - 2}` : "") : "—"}</strong><span>${topCount ? `Most decorated · ${topCount} win${topCount === 1 ? "" : "s"}` : "Most decorated"}</span></div>
+    </section>
+
+    ${ceremony.length ? `<div class="rule"><i></i>Most recent ceremony<i></i></div>
+    <div class="ceremony-spotlight" data-reveal>
+      <div class="eyebrow">${escapeHtml(latestLabel)}</div>
+      <div class="ceremony-grid">
+        ${ceremony.map(({ award, entry }) => `<div class="ceremony-item"><h3>${escapeHtml(award.name)}</h3>${chips(entry.winners)}</div>`).join("")}
+      </div>
+    </div>` : ""}
+
+    <div class="rule"><i></i>Awards of the order<i></i></div>
+    <section class="awards-grid">
+      ${awards.map((award, index) => {
+        const wins = award.history.filter((h) => h.status === "awarded");
+        const rows = [...award.history].reverse().filter((h) => h.status !== "did-not-exist");
+        return `<div class="award-card" data-reveal style="--d:${Math.min(index * 60, 400)}ms">
+          <div class="award-card-top"><h2>${escapeHtml(award.name)}</h2><span>${wins.length} ceremon${wins.length === 1 ? "y" : "ies"}</span></div>
+          <div class="award-history">
+            ${rows.map((h) => h.status === "awarded"
+              ? `<div class="award-row"><span class="award-row-date">${escapeHtml(h.label)}</span>${chips(h.winners)}</div>`
+              : `<div class="award-row is-empty"><span class="award-row-date">${escapeHtml(h.label)}</span><span class="award-row-empty">Not awarded</span></div>`
+            ).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    </section>
+  </div>`;
+  afterRender(options);
+}
 
 function renderNotFound() {
   document.title = "Record not found — TSO Holocron Network";
