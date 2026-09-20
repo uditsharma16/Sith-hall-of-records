@@ -637,7 +637,7 @@ function renderSection(section, options) {
   afterRender(options);
 }
 
-function recordRow(record, index = 0, hrefFn = recordHref) {
+function recordRow(record, index = 0, hrefFn = recordHref, glyphFallback = true) {
   const image = primaryImage(record);
   const text = escapeAttr(`${record.name} ${stripMarkdown(record.description)}`.toLowerCase());
   const number = record.code ? `<span class="record-num is-code">${escapeHtml(record.code)}</span>` : `<span class="record-num">${pad(index + 1)}</span>`;
@@ -646,10 +646,16 @@ function recordRow(record, index = 0, hrefFn = recordHref) {
       ${number}<div><h2>${escapeHtml(record.title)}</h2>${chips(record)}</div>
     </div>`;
   }
-  return `<a class="record-row" href="${hrefFn(record)}" data-link data-reveal data-seed="${escapeAttr(record.id)}" data-text="${text}" style="--d:${Math.min(index * 50, 300)}ms">
+  // On the Leadership page (glyphFallback = false), a record with no image is
+  // shown without the placeholder sigil box at all, since leaders without a
+  // portrait yet are the common case there rather than the exception.
+  const thumb = image
+    ? `<div class="record-image"><img src="${escapeAttr(image.imageUrl)}" alt="${escapeAttr(image.name || record.name)}" loading="lazy" /></div>`
+    : glyphFallback ? `<div class="record-image is-glyph">${glyph(record.id)}</div>` : "";
+  return `<a class="record-row${thumb ? "" : " no-image"}" href="${hrefFn(record)}" data-link data-reveal data-seed="${escapeAttr(record.id)}" data-text="${text}" style="--d:${Math.min(index * 50, 300)}ms">
     ${number}
     <div><h2>${escapeHtml(record.title)}</h2><p>${escapeHtml(excerpt(record))}</p>${chips(record)}</div>
-    ${image ? `<div class="record-image"><img src="${escapeAttr(image.imageUrl)}" alt="${escapeAttr(image.name || record.name)}" loading="lazy" /></div>` : `<div class="record-image is-glyph">${glyph(record.id)}</div>`}
+    ${thumb}
     <span class="record-arrow" aria-hidden="true">→</span>
   </a>`;
 }
@@ -1017,7 +1023,7 @@ function renderLeadershipHome(options) {
   const singleGroupBody = singleGroup
     ? singleGroupTimeline
       ? successionTimeline(singleGroupTimeline)
-      : singleGroup.cards.length ? singleGroup.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No leaders are currently filed here.</p>`
+      : singleGroup.cards.length ? singleGroup.cards.map((record, i) => recordRow(record, i, leadershipRecordHref, false)).join("") : `<p class="no-match">No leaders are currently filed here.</p>`
     : "";
   app.innerHTML = `<div class="page leadership-page">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><span>Leadership</span></nav>
@@ -1065,7 +1071,7 @@ function renderLeadershipGroup(section, options) {
     ${timeline
       ? `<section class="succession-section" aria-label="Succession of ${escapeAttr(section.name)}">${successionTimeline(timeline)}</section>`
       : `<section class="record-list" id="recordList" aria-label="Records in ${escapeAttr(section.name)}">
-      ${section.cards.length ? section.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No records are currently filed in this seat.</p>`}
+      ${section.cards.length ? section.cards.map((record, i) => recordRow(record, i, leadershipRecordHref, false)).join("") : `<p class="no-match">No records are currently filed in this seat.</p>`}
       <p class="no-match" id="noMatch" hidden>No records in this seat match that filter.</p>
     </section>`}
   </div>`;

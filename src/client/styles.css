@@ -294,6 +294,7 @@ a.record-row:hover h2 { color: var(--crimson-deep); }
 .record-row p { margin: 0; color: var(--muted); font-size: .95rem; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .record-row .chips { margin-top: .6rem; }
 .record-row.is-static { grid-template-columns: 3.4rem minmax(0,1fr); padding: 1rem 0; }
+.record-row.no-image { grid-template-columns: 3.4rem minmax(0,1fr) auto; }
 .record-row.is-static .record-num { color: var(--faint); }
 .record-row.is-static h2 { margin: 0; font-size: clamp(1rem, 1.6vw, 1.2rem); color: var(--text); }
 .record-image { width: 12rem; max-width: 100%; aspect-ratio: 16/10; overflow: hidden; border-radius: 10px; background: linear-gradient(145deg, var(--bg-3), var(--bg-2)); border: 1px solid rgba(155,89,182,.2); box-shadow: 0 .4rem 1rem rgba(0,0,0,.4); display: grid; place-items: center; color: rgba(155,89,182,.45); }
@@ -571,7 +572,7 @@ a.succession-card:hover h3 { color: var(--crimson-deep); }
   .spotlight { grid-template-columns: minmax(0, 1fr); }
   .spotlight-art { min-height: 11rem; }
   .section-art { display: none; }
-  .record-row, .record-row.is-static { grid-template-columns: 3.2rem minmax(0,1fr); gap: .9rem; align-items: start; }
+  .record-row, .record-row.is-static, .record-row.no-image { grid-template-columns: 3.2rem minmax(0,1fr); gap: .9rem; align-items: start; }
   .record-num { padding-top: .35rem; }
   .record-num.is-code { padding: .12rem .3rem; font-size: .62rem; letter-spacing: .08em; }
   .record-image { grid-column: 2; width: 100%; }
