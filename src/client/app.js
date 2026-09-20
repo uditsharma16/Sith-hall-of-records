@@ -663,6 +663,48 @@ function recordRow(record, index = 0, hrefFn = recordHref) {
  * that isn't a proper bullet, an accidentally-escaped "\-"), so a field with
  * no value collects whatever non-field lines follow it as a sub-list rather
  * than requiring clean bullets. */
+/* Shared by both succession shapes below: a flat "Key: Value" bullet list.
+ * A field with no value (e.g. "Positions Held:") starts collecting whatever
+ * non-field lines follow it as a sub-list, so a stray line that isn't a
+ * clean bullet (an accidentally-escaped "\- Prefect") still lands in the
+ * right place instead of breaking the layout. */
+function parseFieldLines(lines) {
+  const fields = [];
+  let listField = null;
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const text = trimmed.replace(/^[-*+]\s+/, "").replace(/^\\+-\s*/, "").trim();
+    const field = text.match(/^([A-Za-z][A-Za-z ]{0,40}):\s*(.*)$/);
+    if (field) {
+      const parsed = { key: field[1].trim(), value: field[2].trim(), items: null };
+      if (!parsed.value) parsed.items = [];
+      fields.push(parsed);
+      listField = parsed.items ? parsed : null;
+    } else if (listField) {
+      listField.items.push(text);
+    }
+  }
+  return fields;
+}
+function pullField(fields, key) {
+  const at = fields.findIndex((f) => f.key.toLowerCase() === key);
+  return at < 0 ? null : fields.splice(at, 1)[0];
+}
+const ORDINAL_WORDS = ["Zeroth", "First", "Second", "Third", "Fourth", "Fifth", "Sixth", "Seventh", "Eighth", "Ninth", "Tenth", "Eleventh", "Twelfth"];
+function ordinalWord(n) {
+  if (n < ORDINAL_WORDS.length) return ORDINAL_WORDS[n];
+  const suffixes = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${suffixes[(v - 20) % 10] || suffixes[v] || suffixes[0]}`;
+}
+
+/* Some leadership cards are a running succession record — a bold "**First
+ * Lord Commandant:**"-style heading followed by a flat "Key: Value" bullet
+ * list, repeated once per office-holder — rather than ordinary prose. Two or
+ * more of those headings is treated as a succession list and drawn as a
+ * timeline (see successionTimeline); anything else still goes through the
+ * regular markdown() renderer. */
 function parseSuccession(description = "") {
   const lines = cleanText(description).split("\n");
   const headingEra = (line) => {
@@ -676,42 +718,65 @@ function parseSuccession(description = "") {
   const preamble = markdown(lines.slice(0, headings[0].index).join("\n"));
   const entries = headings.map((heading, i) => {
     const end = i + 1 < headings.length ? headings[i + 1].index : lines.length;
-    const fields = [];
-    let listField = null;
-    for (let n = heading.index + 1; n < end; n += 1) {
-      const raw = lines[n].trim();
-      if (!raw) continue;
-      const text = raw.replace(/^[-*+]\s+/, "").replace(/^\\+-\s*/, "").trim();
-      const field = text.match(/^([A-Za-z][A-Za-z ]{0,40}):\s*(.*)$/);
-      if (field) {
-        const parsed = { key: field[1].trim(), value: field[2].trim(), items: null };
-        if (!parsed.value) parsed.items = [];
-        fields.push(parsed);
-        listField = parsed.items ? parsed : null;
-      } else if (listField) {
-        listField.items.push(text);
-      }
-    }
-    const pull = (key) => { const at = fields.findIndex((f) => f.key.toLowerCase() === key); return at < 0 ? null : fields.splice(at, 1)[0]; };
-    const name = pull("username");
-    const status = pull("status");
+    const fields = parseFieldLines(lines.slice(heading.index + 1, end));
+    const name = pullField(fields, "username");
+    const status = pullField(fields, "status");
     return { era: heading.era, name: name?.value || "", status: status?.value || "", fields };
   });
   return { preamble, entries };
 }
+
+/* Some offices (Wrath, Hand, Voice, Regent, Emperor…) keep each holder as its
+ * own separate Trello card instead of one card with multiple "**First X:**"
+ * sections — the group's roster is turned into the same timeline instead, one
+ * entry per card, ordered as the board already orders them. Requires at least
+ * two cards to actually parse into fields, so a group that merely shares a
+ * name with an office but holds ordinary prose records falls back to the
+ * normal flat roster untouched. */
+const OFFICE_KEYWORDS = ["wrath", "hand", "voice", "regent", "emperor"];
+function isOfficeGroup(name = "") {
+  const normalised = name.toLowerCase();
+  return OFFICE_KEYWORDS.some((word) => new RegExp(`\\b${word}\\b`).test(normalised));
+}
+function successionFromGroup(section) {
+  if (!isOfficeGroup(section.name)) return null;
+  const records = section.cards.filter((record) => !record.titleOnly);
+  if (records.length < 2) return null;
+  let matched = 0;
+  const entries = records.map((record, index) => {
+    const fields = parseFieldLines(cleanText(record.description).split("\n"));
+    if (fields.length) matched += 1;
+    const name = pullField(fields, "username");
+    const status = pullField(fields, "status");
+    return {
+      era: `${ordinalWord(index + 1)} ${section.name}`,
+      name: name?.value || record.title,
+      status: status?.value || "",
+      fields,
+      image: primaryImage(record),
+      href: leadershipRecordHref(record)
+    };
+  });
+  return matched >= 2 ? entries : null;
+}
+
 function successionTimeline(entries) {
-  return `<div class="succession-timeline">${entries.map((entry, index) => `
+  return `<div class="succession-timeline">${entries.map((entry, index) => {
+    const tag = entry.href ? "a" : "div";
+    const linkAttrs = entry.href ? ` href="${escapeAttr(entry.href)}" data-link` : "";
+    return `
     <div class="succession-entry" data-reveal style="--d:${Math.min(index * 90, 480)}ms">
       <span class="succession-dot" aria-hidden="true"></span>
-      <div class="succession-card">
+      <${tag} class="succession-card"${linkAttrs}>
         <div class="succession-top">
           <span class="succession-era">${escapeHtml(entry.era)}</span>
           ${entry.status ? `<span class="succession-status${/active|current|serving/i.test(entry.status) ? " is-active" : ""}">${escapeHtml(entry.status)}</span>` : ""}
         </div>
-        ${entry.name ? `<h3>${inline(entry.name)}</h3>` : ""}
+        ${entry.name || entry.image ? `<div class="succession-name-row">${entry.image ? `<img class="succession-portrait" src="${escapeAttr(entry.image.imageUrl)}" alt="" loading="lazy" />` : ""}${entry.name ? `<h3>${inline(entry.name)}</h3>` : ""}</div>` : ""}
         ${entry.fields.length ? `<dl class="succession-fields">${entry.fields.map((field) => `<div><dt>${escapeHtml(field.key)}</dt><dd>${field.items ? (field.items.length > 1 ? `<ul>${field.items.map((item) => `<li>${inline(item)}</li>`).join("")}</ul>` : inline(field.items[0] || "")) : inline(field.value)}</dd></div>`).join("")}</dl>` : ""}
-      </div>
-    </div>`).join("")}
+      </${tag}>
+    </div>`;
+  }).join("")}
   </div>`;
 }
 
@@ -908,6 +973,12 @@ function renderLeadershipHome(options) {
   document.title = `${board.name || "Leadership"} — TSO Holocron Network`;
   const groups = board.lists;
   const singleGroup = groups.length === 1 ? groups[0] : null;
+  const singleGroupTimeline = singleGroup ? successionFromGroup(singleGroup) : null;
+  const singleGroupBody = singleGroup
+    ? singleGroupTimeline
+      ? successionTimeline(singleGroupTimeline)
+      : singleGroup.cards.length ? singleGroup.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No leaders are currently filed here.</p>`
+    : "";
   app.innerHTML = `<div class="page leadership-page">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><span>Leadership</span></nav>
     <div class="leadership-hero">
@@ -922,8 +993,8 @@ function renderLeadershipHome(options) {
     </div>
     ${singleGroup ? `
     <div class="rule"><i></i>${escapeHtml(singleGroup.name)}<i></i></div>
-    <section class="record-list" aria-label="${escapeAttr(singleGroup.name)}">
-      ${singleGroup.cards.length ? singleGroup.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No leaders are currently filed here.</p>`}
+    <section class="${singleGroupTimeline ? "succession-section" : "record-list"}" aria-label="${escapeAttr(singleGroup.name)}">
+      ${singleGroupBody}
     </section>` : `
     <div class="rule"><i></i>Seats of the order<i></i></div>
     <section class="section-index" aria-label="Leadership groups">
@@ -943,7 +1014,8 @@ function renderLeadershipHome(options) {
 function renderLeadershipGroup(section, options) {
   document.title = `${section.name} — TSO Holocron Network`;
   const index = leadershipState.board.lists.indexOf(section);
-  const filterable = section.cards.filter((record) => !record.titleOnly).length > 3;
+  const timeline = successionFromGroup(section);
+  const filterable = !timeline && section.cards.filter((record) => !record.titleOnly).length > 3;
   app.innerHTML = `<div class="page">
     <nav class="breadcrumb" aria-label="Breadcrumb"><a href="${link("/")}" data-link>Network</a><span aria-hidden="true">◆</span><a href="${link("/leadership")}" data-link>Leadership</a><span aria-hidden="true">◆</span><span>${escapeHtml(section.name)}</span></nav>
     <header class="section-header${section.art ? " has-art" : ""}">
@@ -956,10 +1028,12 @@ function renderLeadershipGroup(section, options) {
         ${filterable ? `<label class="filter">${SEARCH_ICON}<input id="sectionFilter" type="search" placeholder="Filter this seat…" autocomplete="off" aria-label="Filter records in this seat" /></label>` : ""}
       </div>
     </header>
-    <section class="record-list" id="recordList" aria-label="Records in ${escapeAttr(section.name)}">
+    ${timeline
+      ? `<section class="succession-section" aria-label="Succession of ${escapeAttr(section.name)}">${successionTimeline(timeline)}</section>`
+      : `<section class="record-list" id="recordList" aria-label="Records in ${escapeAttr(section.name)}">
       ${section.cards.length ? section.cards.map((record, i) => recordRow(record, i, leadershipRecordHref)).join("") : `<p class="no-match">No records are currently filed in this seat.</p>`}
       <p class="no-match" id="noMatch" hidden>No records in this seat match that filter.</p>
-    </section>
+    </section>`}
   </div>`;
   byId("sectionFilter")?.addEventListener("input", (event) => {
     const value = event.target.value.trim().toLowerCase(); let shown = 0;
