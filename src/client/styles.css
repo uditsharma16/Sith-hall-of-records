@@ -368,9 +368,12 @@ figcaption { margin-top: .6rem; color: var(--faint); font: 400 .66rem var(--mono
 .succession-era { color: var(--crimson); font: 500 .68rem var(--mono); letter-spacing: .14em; text-transform: uppercase; }
 .succession-status { flex: none; padding: .15rem .6rem; border: 1px solid var(--soft-line); border-radius: 999px; color: var(--faint); font: 500 .62rem var(--mono); letter-spacing: .1em; text-transform: uppercase; }
 .succession-status.is-active { color: #4fd88a; border-color: rgba(79,216,138,.4); background: rgba(79,216,138,.08); }
-.succession-name-row { display: flex; align-items: center; gap: .8rem; margin-top: .55rem; }
-.succession-portrait { flex: none; width: 2.8rem; height: 2.8rem; border-radius: 10px; object-fit: cover; border: 1px solid rgba(155,89,182,.3); box-shadow: 0 .3rem .8rem rgba(0,0,0,.4); }
-.succession-card h3 { margin: 0; font: 400 1.35rem var(--display); color: var(--ink); }
+.succession-name-row { display: flex; align-items: center; gap: 1.1rem; margin-top: .7rem; }
+.succession-portrait { flex: none; width: 5.6rem; height: 5.6rem; border-radius: 12px; object-fit: cover; border: 1px solid rgba(155,89,182,.32); box-shadow: 0 .5rem 1.2rem rgba(0,0,0,.45); }
+.succession-card h3 { margin: 0; font: 400 1.5rem var(--display); color: var(--ink); }
+@media (max-width: 480px) {
+  .succession-portrait { width: 4.2rem; height: 4.2rem; }
+}
 a.succession-card { display: block; text-decoration: none; transition: border-color .3s ease, box-shadow .3s ease, transform .3s var(--ease); }
 a.succession-card:hover { border-color: rgba(155,89,182,.4); box-shadow: 0 1rem 2.4rem rgba(0,0,0,.45), 0 0 2.4rem rgba(155,89,182,.14); transform: translateY(-3px); }
 a.succession-card:hover h3 { color: var(--crimson-deep); }
