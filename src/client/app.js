@@ -926,20 +926,51 @@ const leadershipFallback = {
 const leadershipState = { board: null, signature: "", lastSync: 0, live: false };
 const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: link("/leadership"), label: "Leadership" }], groupHref: (section) => leadershipGroupHref(section), recordHrefFn: (record) => leadershipRecordHref(record), succession: true };
 
+/* The Order's ruling seats should always lead the Leadership page, ahead of
+ * the Dark Council's various spheres (Sphere of Galactic Influence, Sphere
+ * of Ancient Knowledge…) further down the board. Trello's own list order
+ * (list.pos) still decides everything else — this only promotes whichever
+ * groups match these names, in this order, and leaves the rest exactly
+ * where the board already has them. */
+/* Titles like "Hand of the Emperor" and "Voice of the Emperor" contain the
+ * word "emperor" too, so the more specific offices are matched first —
+ * otherwise they'd all collapse onto the Emperor's own rank. The numbers
+ * are the desired DISPLAY order, independent of match order. */
+const LEADERSHIP_OFFICES = [
+  { match: "hand", rank: 2 },
+  { match: "voice", rank: 3 },
+  { match: "wrath", rank: 4 },
+  { match: "regent", rank: 1 },
+  { match: "emperor", rank: 0 },
+  { match: "dark honor guard", rank: 5 }
+];
+function leadershipPriorityRank(name = "") {
+  const normalised = name.toLowerCase();
+  const office = LEADERSHIP_OFFICES.find(({ match }) => new RegExp(`\\b${match.replace(/ /g, "\\s+")}\\b`).test(normalised));
+  return office ? office.rank : LEADERSHIP_OFFICES.length;
+}
+function orderLeadershipLists(board) {
+  const ordered = board.lists
+    .map((list, index) => ({ list, index }))
+    .sort((a, b) => leadershipPriorityRank(a.list.name) - leadershipPriorityRank(b.list.name) || a.index - b.index)
+    .map((entry) => entry.list);
+  return { ...board, lists: ordered };
+}
+
 async function loadLeadershipBoard() {
-  if (PREVIEW) return prepareBoard({ ...leadershipFallback, preview: true });
+  if (PREVIEW) return orderLeadershipLists(prepareBoard({ ...leadershipFallback, preview: true }));
   const response = await fetch("/api/board?board=leadership", { cache: "no-store" });
   if (!response.ok) throw new Error("Leadership board unavailable");
   const board = await response.json();
   if (!board.ok || !Array.isArray(board.lists)) throw new Error("Leadership board unavailable");
-  return prepareBoard(board);
+  return orderLeadershipLists(prepareBoard(board));
 }
 async function startLeadership() {
   try {
     leadershipState.board = await loadLeadershipBoard();
     leadershipState.live = !leadershipState.board.preview;
   } catch {
-    leadershipState.board = prepareBoard(leadershipFallback);
+    leadershipState.board = orderLeadershipLists(prepareBoard(leadershipFallback));
     leadershipState.live = false;
   }
   leadershipState.signature = signatureOf(leadershipState.board);
@@ -985,8 +1016,7 @@ function renderLeadershipHome(options) {
       <img class="leadership-guard is-left" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
       <img class="leadership-guard is-right" src="/leadership-sentinel.webp" alt="" aria-hidden="true" />
       <div class="leadership-hero-copy">
-        <div class="eyebrow">The Sith Order</div>
-        <h1 class="awards-title">Leadership Records</h1>
+        <h1 class="eyebrow">The Sith Order</h1>
         <p class="awards-lead">${escapeHtml(board.description || "The ranking officers of the Order, and the seats they hold.")}</p>
         <p class="awards-static-note">◆ ${leadershipState.live ? "Live · synced with Trello" : "Reconnecting to Trello…"}</p>
       </div>

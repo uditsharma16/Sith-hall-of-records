@@ -158,7 +158,7 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 #app { min-height: calc(100vh - 10rem); }
 #app:focus { outline: none; }
 .page { width: min(78rem, 100%); margin: 0 auto; padding: clamp(2rem, 5vw, 4.5rem) var(--gutter) 6rem; }
-.eyebrow { display: flex; align-items: center; gap: .8rem; color: var(--crimson); font: 500 .7rem var(--mono); letter-spacing: .24em; text-transform: uppercase; }
+.eyebrow { margin: 0; display: flex; align-items: center; gap: .8rem; color: var(--crimson); font: 500 .7rem var(--mono); letter-spacing: .24em; text-transform: uppercase; }
 .eyebrow::before { content: ""; width: 2.4rem; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--crimson), var(--amber-light)); box-shadow: 0 0 8px rgba(155,89,182,.45); }
 .glyph { display: block; width: 100%; height: auto; fill: none; stroke: currentColor; stroke-width: .8; stroke-linecap: round; stroke-linejoin: round; overflow: visible; }
 .glyph .glyph-ring, .glyph .glyph-core { transform-origin: 0 0; transform-box: view-box; }
