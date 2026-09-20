@@ -745,9 +745,10 @@ function renderAwards(options) {
     <section class="awards-grid">
       ${awards.map((award, index) => {
         const wins = award.history.filter((h) => h.status === "awarded");
+        const recipients = wins.reduce((sum, h) => sum + h.winners.length, 0);
         const rows = [...award.history].reverse().filter((h) => h.status !== "did-not-exist");
         return `<div class="award-card" data-reveal style="--d:${Math.min(index * 60, 400)}ms">
-          <div class="award-card-top"><h2>${escapeHtml(award.name)}</h2><span>${wins.length} ceremon${wins.length === 1 ? "y" : "ies"}</span></div>
+          <div class="award-card-top"><h2>${escapeHtml(award.name)}</h2><span>${recipients} recipient${recipients === 1 ? "" : "s"}</span></div>
           <div class="award-history">
             ${rows.map((h) => h.status === "awarded"
               ? `<div class="award-row"><span class="award-row-date">${escapeHtml(h.label)}</span>${chips(h.winners)}</div>`
