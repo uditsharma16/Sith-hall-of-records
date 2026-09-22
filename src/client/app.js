@@ -102,6 +102,7 @@ async function start() {
   renderMenus();
   route();
   updateSyncLabel();
+  setTimeout(watchFrameRate, 800); // let the first render and its entrance animations settle
   if (!PREVIEW) {
     setInterval(refresh, POLL_MS);
     setInterval(refreshLeadership, POLL_MS);
@@ -346,7 +347,8 @@ const HYPERSPACE_ARRIVE_MS = 560; // streaks receding + #app expanding, together
 let warping = false;
 function hyperspaceJump(swap) {
   warping = true;
-  hyperspaceField = makeHyperspaceField(Math.round(Math.min(380, Math.max(140, innerWidth / 4))));
+  const streaks = Math.round(Math.min(380, Math.max(140, innerWidth / 4)));
+  hyperspaceField = makeHyperspaceField(perf.lite ? Math.round(streaks / 3) : streaks);
   resizeHyperspaceCanvas();
   hyperspaceCanvas.classList.add("visible");
   // A short, purely-timed beat with no visual change of its own — the page holds
@@ -1213,11 +1215,62 @@ function bindMotion(root) {
   });
 }
 
+/* ───────── Performance guard ─────────
+ * Everyone starts on the full version. Shortly after the first page renders we
+ * sample real frame timing for ~1.5s of visible time, and only if the page is
+ * consistently choppy (median frame slower than 25fps, or a quarter of frames
+ * over 50ms) does it switch to a lighter mode for the rest of the tab session.
+ * Without GPU help the three blurred, drifting background glows are by far the
+ * costliest thing on the page, so that mode swaps them for static gradients and
+ * stops the other moving background layers; the page itself is unchanged.
+ * ?fx=lite / ?fx=full force either mode for the current tab. */
+const perf = { lite: false, decided: false };
+const FX_KEY = "tso-fx";
+function setLiteMode() {
+  perf.lite = perf.decided = true;
+  document.documentElement.classList.add("fx-lite");
+  try { sessionStorage.setItem(FX_KEY, "lite"); } catch {}
+}
+/* Runs at boot, before anything animates, so a remembered or forced choice
+ * applies immediately rather than after another round of lag. */
+function applyChosenFxMode() {
+  let mode = new URLSearchParams(location.search).get("fx");
+  try {
+    if (mode === "lite" || mode === "full") sessionStorage.setItem(FX_KEY, mode);
+    else mode = sessionStorage.getItem(FX_KEY);
+  } catch {}
+  if (mode === "lite") setLiteMode();
+  if (mode === "full") perf.decided = true;
+}
+function framesAreChoppy(samples) {
+  if (samples.length < 3) return false;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const slowShare = samples.filter((ms) => ms > 50).length / samples.length;
+  return median > 40 || slowShare >= .25;
+}
+function watchFrameRate() {
+  if (perf.decided) return;
+  const samples = [];
+  let last = 0, measured = 0;
+  // rAF pauses in a background tab; drop the gap so returning can't look like one enormous frame.
+  const forgetGap = () => { last = 0; };
+  document.addEventListener("visibilitychange", forgetGap);
+  const tick = (now) => {
+    if (last) { samples.push(now - last); measured += now - last; }
+    last = now;
+    if (measured < 1500) { requestAnimationFrame(tick); return; }
+    document.removeEventListener("visibilitychange", forgetGap);
+    if (framesAreChoppy(samples)) setLiteMode();
+  };
+  requestAnimationFrame(tick);
+}
+
 function createAtmosphere() {
   if (reducedMotion.matches) return;
   let frame = 0;
   window.addEventListener("pointermove", (event) => {
-    if (frame) return;
+    if (frame || perf.lite) return;
     frame = requestAnimationFrame(() => {
       const root = document.documentElement.style;
       root.setProperty("--pointer-x", `${event.clientX}px`); root.setProperty("--pointer-y", `${event.clientY}px`);
@@ -1241,6 +1294,7 @@ function createAtmosphere() {
   const draw = () => {
     if (!running) return;
     context.clearRect(0, 0, width, height);
+    if (perf.lite) return;
     for (const mote of motes) {
       mote.y -= mote.speed; mote.sway += mote.swaySpeed; mote.x += Math.sin(mote.sway) * .3;
       if (mote.y < -12) Object.assign(mote, spawn(false));
@@ -1405,6 +1459,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") { closeLightbox(); closeSearch(); closeMenus(); }
 });
 window.addEventListener(PREVIEW ? "hashchange" : "popstate", () => route());
+applyChosenFxMode();
 createAtmosphere();
 initDroid();
 start();

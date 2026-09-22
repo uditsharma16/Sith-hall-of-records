@@ -74,6 +74,19 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
 .scene::after { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, .45) 100%); }
 .reading-progress { position: fixed; left: 0; top: 0; z-index: 100; width: 100%; height: 3px; background: linear-gradient(90deg, var(--crimson), var(--amber-light), var(--violet)); transform: scaleX(0); transform-origin: left; box-shadow: 0 0 12px rgba(155,89,182,.5); }
 
+/* Lighter atmosphere, only for visitors whose frame rate the performance guard in
+ * app.js measured as choppy (html.fx-lite). A blurred shape that also moves has to
+ * be re-blurred every frame, which is ruinous without GPU compositing; a radial
+ * gradient to transparent gives the same soft glow at no cost. The grain and motes
+ * are full-screen per-frame layers, so they go; the cursor glow (app.js stops it
+ * following the mouse), prism bands and floor grid stay, just held still. */
+.fx-lite .scene-glow { filter: none; animation: none; will-change: auto; transform: scale(1.25); }
+.fx-lite .scene-glow-crimson { background: radial-gradient(circle closest-side, #9b59b6 38%, transparent); }
+.fx-lite .scene-glow-amber { background: radial-gradient(circle closest-side, #c9a24d 38%, transparent); }
+.fx-lite .scene-glow-violet { background: radial-gradient(circle closest-side, #6f3fa0 38%, transparent); }
+.fx-lite .scene-prism, .fx-lite .scene-floor { animation: none; }
+.fx-lite .scene-grain, .fx-lite .scene-motes { display: none; }
+
 @keyframes drift-a { to { transform: translate(-8vw, 10vh) scale(1.12); } }
 @keyframes drift-b { to { transform: translate(14vw, -9vh) scale(.9); } }
 @keyframes drift-c { to { transform: translate(-12vw, 14vh) scale(1.2); } }
