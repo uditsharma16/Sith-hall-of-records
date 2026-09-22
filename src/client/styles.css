@@ -492,7 +492,15 @@ a.succession-card:hover h3 { color: var(--crimson-deep); }
 .loading-page { min-height: 70vh; display: grid; place-content: center; justify-items: center; gap: 1.2rem; color: var(--muted); font: 400 .72rem var(--mono); letter-spacing: .24em; text-transform: uppercase; }
 .loader-sigil { width: 3.4rem; fill: none; stroke: var(--crimson); stroke-width: 2; stroke-linejoin: round; filter: drop-shadow(0 0 .7rem rgba(155,89,182,.55)); animation: loader 1.6s ease-in-out infinite; }
 .loader-sigil path { stroke-dasharray: 160; animation: dash 1.6s ease-in-out infinite; }
-.site-footer { min-height: 5rem; padding: 1.6rem var(--gutter); border-top: 1px solid var(--soft-line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: .6rem 1rem; color: var(--faint); font: 400 .66rem var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+.site-footer { min-height: 5rem; padding: 1.6rem var(--gutter); border-top: 1px solid var(--soft-line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .6rem 1rem; color: var(--faint); font: 400 .66rem var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+/* Full / Lite effects switch — see the performance guard in app.js. */
+.fx-toggle { display: inline-flex; align-items: center; gap: .55rem; padding: .35rem .7rem; border: 1px solid var(--soft-line); border-radius: 999px; background: none; color: var(--muted); font: inherit; letter-spacing: inherit; text-transform: inherit; transition: border-color .25s ease, color .25s ease; }
+.fx-toggle:hover { border-color: var(--line); color: var(--ink); }
+.fx-toggle-track { position: relative; width: 1.9rem; height: 1rem; border-radius: 999px; background: rgba(232,225,245,.12); transition: background .25s ease; }
+.fx-toggle-track i { position: absolute; top: .15rem; left: .15rem; width: .7rem; height: .7rem; border-radius: 50%; background: var(--amber-light); box-shadow: 0 0 .5rem rgba(201,162,77,.55); transition: transform .25s var(--ease), background .25s ease, box-shadow .25s ease; }
+.fx-toggle[aria-checked="true"] .fx-toggle-track { background: rgba(155,89,182,.35); }
+.fx-toggle[aria-checked="true"] .fx-toggle-track i { transform: translateX(.9rem); background: var(--crimson); box-shadow: none; }
+#fxToggleState { min-width: 2.1rem; text-align: left; color: var(--ink-2); }
 .toast { position: fixed; left: 50%; bottom: calc(1.6rem + env(safe-area-inset-bottom, 0px)); z-index: 80; translate: -50% 1rem; max-width: calc(100vw - 2rem); padding: .75rem 1.1rem; border: 1px solid rgba(155,89,182,.25); border-radius: 10px; background: var(--glass-strong); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: var(--shadow), var(--glow); color: var(--ink); font: 400 .72rem var(--mono); letter-spacing: .08em; opacity: 0; pointer-events: none; transition: opacity .4s ease, translate .4s var(--ease); }
 .toast.show { opacity: 1; translate: -50% 0; }
 .toast::before { content: "◆ "; color: var(--crimson); }
@@ -607,6 +615,8 @@ a.succession-card:hover h3 { color: var(--crimson-deep); }
   .search-result > b, .search-hints span:not(:last-child) { display: none; }
   .prose { font-size: 1.06rem; }
   .prose blockquote { padding-left: 1rem; }
+  /* Stacked down the left so the effects switch sits clear of the droid parked bottom-right. */
+  .site-footer { flex-direction: column; align-items: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }

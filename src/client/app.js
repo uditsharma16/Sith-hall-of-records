@@ -1223,24 +1223,42 @@ function bindMotion(root) {
  * Without GPU help the three blurred, drifting background glows are by far the
  * costliest thing on the page, so that mode swaps them for static gradients and
  * stops the other moving background layers; the page itself is unchanged.
+ * The footer switch lets anyone pick either mode themselves; that choice is
+ * remembered across visits and always beats the automatic check.
  * ?fx=lite / ?fx=full force either mode for the current tab. */
-const perf = { lite: false, decided: false };
-const FX_KEY = "tso-fx";
-function setLiteMode() {
-  perf.lite = perf.decided = true;
-  document.documentElement.classList.add("fx-lite");
-  try { sessionStorage.setItem(FX_KEY, "lite"); } catch {}
+const perf = { lite: false, decided: false, resumeAtmosphere: null };
+const FX_SESSION = "tso-fx";    // this tab only: the automatic verdict, or a ?fx= override
+const FX_PREF = "tso-fx-pref";  // the visitor's own pick from the footer switch
+function setFxMode(lite) {
+  perf.lite = lite;
+  document.documentElement.classList.toggle("fx-lite", lite);
+  byId("fxToggle").setAttribute("aria-checked", String(lite));
+  byId("fxToggleState").textContent = lite ? "Lite" : "Full";
+  if (!lite) perf.resumeAtmosphere?.();
+}
+function autoSwitchToLite() {
+  perf.decided = true;
+  setFxMode(true);
+  try { sessionStorage.setItem(FX_SESSION, "lite"); } catch {}
+  toast("Lighter effects on for smoother performance — switch back in the footer");
 }
 /* Runs at boot, before anything animates, so a remembered or forced choice
  * applies immediately rather than after another round of lag. */
 function applyChosenFxMode() {
   let mode = new URLSearchParams(location.search).get("fx");
   try {
-    if (mode === "lite" || mode === "full") sessionStorage.setItem(FX_KEY, mode);
-    else mode = sessionStorage.getItem(FX_KEY);
+    if (mode === "lite" || mode === "full") sessionStorage.setItem(FX_SESSION, mode);
+    else mode = localStorage.getItem(FX_PREF) || sessionStorage.getItem(FX_SESSION);
   } catch {}
-  if (mode === "lite") setLiteMode();
-  if (mode === "full") perf.decided = true;
+  if (mode !== "lite" && mode !== "full") return;
+  perf.decided = true;
+  setFxMode(mode === "lite");
+}
+function toggleFxMode() {
+  const lite = !perf.lite;
+  perf.decided = true; // a measurement still in flight must not overrule the visitor
+  setFxMode(lite);
+  try { localStorage.setItem(FX_PREF, lite ? "lite" : "full"); } catch {}
 }
 function framesAreChoppy(samples) {
   if (samples.length < 3) return false;
@@ -1261,7 +1279,7 @@ function watchFrameRate() {
     last = now;
     if (measured < 1500) { requestAnimationFrame(tick); return; }
     document.removeEventListener("visibilitychange", forgetGap);
-    if (framesAreChoppy(samples)) setLiteMode();
+    if (!perf.decided && framesAreChoppy(samples)) autoSwitchToLite();
   };
   requestAnimationFrame(tick);
 }
@@ -1283,7 +1301,7 @@ function createAtmosphere() {
   const canvas = byId("motes"); const context = canvas?.getContext("2d");
   if (!context) return;
   const colors = ["155,89,182", "111,63,160", "201,162,77", "232,225,213", "91,42,130"];
-  let width = 0, height = 0, motes = [], running = true;
+  let width = 0, height = 0, motes = [], running = true, looping = false;
   const spawn = (anywhere) => ({ x: Math.random() * width, y: anywhere ? Math.random() * height : height + 10, size: .7 + Math.random() * 1.9, speed: .1 + Math.random() * .4, sway: Math.random() * Math.PI * 2, swaySpeed: .003 + Math.random() * .01, alpha: .18 + Math.random() * .42, color: colors[Math.floor(Math.random() * colors.length)] });
   const resize = () => {
     const ratio = Math.min(devicePixelRatio || 1, 2);
@@ -1291,10 +1309,12 @@ function createAtmosphere() {
     canvas.width = width * ratio; canvas.height = height * ratio; context.setTransform(ratio, 0, 0, ratio, 0, 0);
     motes = Array.from({ length: Math.round(Math.min(64, Math.max(22, width / 24))) }, () => spawn(true));
   };
+  // `looping` guards against ever running two loops at once when the loop is
+  // resumed (tab shown again, or switched back from lite mode).
   const draw = () => {
-    if (!running) return;
     context.clearRect(0, 0, width, height);
-    if (perf.lite) return;
+    if (!running || perf.lite) { looping = false; return; }
+    looping = true;
     for (const mote of motes) {
       mote.y -= mote.speed; mote.sway += mote.swaySpeed; mote.x += Math.sin(mote.sway) * .3;
       if (mote.y < -12) Object.assign(mote, spawn(false));
@@ -1308,9 +1328,10 @@ function createAtmosphere() {
     }
     requestAnimationFrame(draw);
   };
+  perf.resumeAtmosphere = () => { if (running && !looping) draw(); };
   resize(); draw();
   window.addEventListener("resize", resize, { passive: true });
-  document.addEventListener("visibilitychange", () => { const wasRunning = running; running = !document.hidden; if (running && !wasRunning) draw(); });
+  document.addEventListener("visibilitychange", () => { running = !document.hidden; perf.resumeAtmosphere(); });
 }
 
 document.addEventListener("pointerdown", (event) => {
@@ -1446,6 +1467,7 @@ byId("menuToggle").addEventListener("click", () => { const open = byId("mainNav"
 byId("sectionsButton").addEventListener("click", () => { const open = byId("sectionsPopover").classList.toggle("open"); byId("sectionsButton").setAttribute("aria-expanded", String(open)); });
 byId("searchTrigger").addEventListener("click", () => openSearch());
 byId("randomButton").addEventListener("click", jumpToRandomRecord);
+byId("fxToggle").addEventListener("click", toggleFxMode);
 byId("closeSearch").addEventListener("click", closeSearch);
 byId("globalSearch").addEventListener("input", (event) => renderSearch(event.target.value));
 byId("globalSearch").addEventListener("keydown", (event) => {
