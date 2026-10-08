@@ -24,6 +24,7 @@
     <div class="scene-aura"></div>
     <div class="scene-grain"></div>
   </div>
+  <div class="hw-layer" id="hwLayer" aria-hidden="true" hidden></div>
   <div class="reading-progress" id="readingProgress" aria-hidden="true"></div>
 
   <header class="site-header" id="siteHeader">
@@ -73,9 +74,14 @@
 
   <footer class="site-footer">
     <span>TSO · Holocron Network</span>
-    <button type="button" class="fx-toggle" id="fxToggle" role="switch" aria-checked="false" aria-label="Lite effects" title="Lite effects: calmer background animation for slower devices">
-      <span>Effects</span><span class="fx-toggle-track" aria-hidden="true"><i></i></span><span id="fxToggleState">Full</span>
-    </button>
+    <div class="footer-switches">
+      <button type="button" class="fx-toggle" id="fxToggle" role="switch" aria-checked="false" aria-label="Lite effects" title="Lite effects: calmer background animation for slower devices">
+        <span>Effects</span><span class="fx-toggle-track" aria-hidden="true"><i></i></span><span id="fxToggleState">Full</span>
+      </button>
+      <button type="button" class="fx-toggle hw-toggle" id="hwToggle" role="switch" aria-checked="false" aria-label="Halloween theme" title="Halloween theme" hidden>
+        <span>Halloween</span><span class="fx-toggle-track" aria-hidden="true"><i></i></span><span id="hwToggleState">Off</span>
+      </button>
+    </div>
     <span id="footerSync">Source: Trello</span>
   </footer>
 
@@ -88,6 +94,7 @@
       <span class="droid-glow"></span>
       <img class="droid-img" src="/droid.png" alt="" width="384" height="452" draggable="false" />
       <span class="droid-eye"></span>
+      <svg class="droid-hat" viewBox="0 0 100 80"><ellipse cx="50" cy="68" rx="47" ry="9" fill="#1c1028"/><path d="M26 66C34 46 38 30 46 14C50 6 58 2 66 6C60 8 56 14 56 22C56 38 66 52 74 66Z" fill="#2a1638"/><path d="M29 57C43 61 57 61 71 57L74 66C58 70 42 70 26 66Z" fill="#6f3fa0"/><rect x="45" y="58.5" width="10" height="8" rx="1" fill="none" stroke="#ffb347" stroke-width="2"/></svg>
     </span>
     <span class="droid-bubble" id="droidBubble" aria-live="polite"></span>
   </button>

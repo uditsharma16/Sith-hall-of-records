@@ -60,9 +60,9 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
  * bands panning across the page, a faint holographic floor grid and a canvas of motes. */
 .scene { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: linear-gradient(160deg, #0b0a0f 0%, #120c1a 46%, #0d0912 100%); }
 .scene-glow { position: absolute; width: 62vw; aspect-ratio: 1; border-radius: 50%; filter: blur(5.5rem); will-change: transform; }
-.scene-glow-crimson { top: -30vw; right: -14vw; background: #9b59b6; opacity: .32; animation: drift-a 20s ease-in-out infinite alternate; }
-.scene-glow-amber { bottom: -42vw; left: -26vw; background: #c9a24d; opacity: .22; animation: drift-b 26s ease-in-out infinite alternate; }
-.scene-glow-violet { top: 30vh; left: 30vw; width: 44vw; background: #6f3fa0; opacity: .28; animation: drift-c 32s ease-in-out infinite alternate; }
+.scene-glow-crimson { --glow: #9b59b6; top: -30vw; right: -14vw; background: var(--glow); opacity: .32; animation: drift-a 20s ease-in-out infinite alternate; }
+.scene-glow-amber { --glow: #c9a24d; bottom: -42vw; left: -26vw; background: var(--glow); opacity: .22; animation: drift-b 26s ease-in-out infinite alternate; }
+.scene-glow-violet { --glow: #6f3fa0; top: 30vh; left: 30vw; width: 44vw; background: var(--glow); opacity: .28; animation: drift-c 32s ease-in-out infinite alternate; }
 .scene-prism { position: absolute; inset: -30% -20%; opacity: .55; mix-blend-mode: screen; background:
   linear-gradient(115deg, transparent 30%, rgba(155,89,182,.16) 36%, rgba(201,162,77,.14) 40%, rgba(111,63,160,.16) 44%, transparent 50%),
   linear-gradient(115deg, transparent 58%, rgba(91,42,130,.14) 62%, rgba(155,89,182,.12) 66%, transparent 72%);
@@ -80,10 +80,7 @@ input[type="search"]::-webkit-search-cancel-button, input[type="search"]::-webki
  * gradient to transparent gives the same soft glow at no cost. The grain and motes
  * are full-screen per-frame layers, so they go; the cursor glow (app.js stops it
  * following the mouse), prism bands and floor grid stay, just held still. */
-.fx-lite .scene-glow { filter: none; animation: none; will-change: auto; transform: scale(1.25); }
-.fx-lite .scene-glow-crimson { background: radial-gradient(circle closest-side, #9b59b6 38%, transparent); }
-.fx-lite .scene-glow-amber { background: radial-gradient(circle closest-side, #c9a24d 38%, transparent); }
-.fx-lite .scene-glow-violet { background: radial-gradient(circle closest-side, #6f3fa0 38%, transparent); }
+.fx-lite .scene-glow { filter: none; animation: none; will-change: auto; transform: scale(1.25); background: radial-gradient(circle closest-side, var(--glow) 38%, transparent); }
 .fx-lite .scene-prism, .fx-lite .scene-floor { animation: none; }
 .fx-lite .scene-grain, .fx-lite .scene-motes { display: none; }
 
@@ -625,3 +622,71 @@ a.succession-card:hover h3 { color: var(--crimson-deep); }
   .ticker { overflow-x: auto; }
   .reveal-ready [data-reveal] { opacity: 1; transform: none; }
 }
+
+/* ───────── Seasonal wrapper: Halloween ─────────
+ * Everything here is gated on html.theme-halloween (see the Halloween block in
+ * app.js). The decorations live in their own fixed layer behind the page, so
+ * content is never covered. Full mode animates them with transforms/opacity
+ * only (no filters on anything that moves); Lite and reduced motion hold the
+ * same scene still. */
+.theme-halloween { --amber: #ff8c1a; --amber-light: #ffb347; --crimson-deep: #ff9a3c; }
+.theme-halloween .scene-glow-crimson { --glow: #ff7518; opacity: .24; }
+.theme-halloween .scene-glow-amber { --glow: #5fbf3a; opacity: .14; }
+.theme-halloween .droid-eye { background: #ff8c1a; }
+
+.hw-layer { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.hw-moon { position: absolute; top: 9vh; right: 4vw; width: clamp(70px, 9vw, 140px); aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 34% 32%, #fff8e1 0%, #f8dc9a 38%, #e9b45c 70%, #c98a38 100%); box-shadow: 0 0 2.5rem .6rem rgba(255,196,110,.3), 0 0 7rem 2rem rgba(255,140,26,.14); }
+.hw-moon::before { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 62% 36%, rgba(150,92,36,.32) 0 9%, transparent 10%), radial-gradient(circle at 40% 64%, rgba(150,92,36,.26) 0 13%, transparent 14%), radial-gradient(circle at 70% 70%, rgba(150,92,36,.2) 0 7%, transparent 8%), radial-gradient(circle at 28% 40%, rgba(150,92,36,.16) 0 5%, transparent 6%); }
+.hw-web { position: absolute; left: 0; top: 0; width: clamp(120px, 15vw, 220px); fill: none; stroke: rgba(232,225,213,.22); stroke-width: 1; }
+.hw-spider { position: absolute; left: clamp(64px, 8.4vw, 124px); top: -140px; display: grid; justify-items: center; animation: hw-dangle 6s ease-in-out infinite alternate; }
+.hw-thread { display: block; width: 1px; height: 262px; background: linear-gradient(rgba(232,225,213,.12), rgba(232,225,213,.45)); }
+.hw-spider-body { width: 28px; margin-top: -4px; }
+.hw-bat { position: absolute; left: 0; top: 0; width: var(--w); color: #4a3360; transform: translate(var(--sx), var(--sy)); animation: hw-fly var(--dur) linear var(--delay) infinite; }
+.hw-bat.is-back { animation-direction: reverse; }
+.hw-bat svg { display: block; width: 100%; fill: currentColor; transform-origin: 50% 60%; animation: hw-flap .3s ease-in-out infinite alternate; }
+.hw-fog { position: absolute; left: 0; width: 200%; background-repeat: repeat-x; background-size: 50% 100%; }
+.hw-fog-a { bottom: -6vh; height: 34vh; background-image: radial-gradient(ellipse 24% 46% at 28% 72%, rgba(170,192,186,.14), transparent 72%), radial-gradient(ellipse 22% 40% at 72% 78%, rgba(150,182,170,.12), transparent 72%); animation: hw-drift 80s linear infinite; }
+.hw-fog-b { bottom: -10vh; height: 24vh; opacity: .8; background-image: radial-gradient(ellipse 30% 50% at 50% 70%, rgba(160,186,176,.12), transparent 72%); animation: hw-drift 52s linear infinite reverse; }
+.hw-pumpkins { position: absolute; left: 1.2rem; bottom: .7rem; display: flex; align-items: flex-end; gap: .35rem; }
+.hw-pumpkin { position: relative; width: 64px; }
+.hw-pumpkin.is-small { width: 44px; }
+.hw-pumpkin svg { position: relative; display: block; width: 100%; }
+.hw-pumpkin-glow { position: absolute; left: -45%; right: -45%; bottom: -30%; height: 120%; background: radial-gradient(ellipse at 50% 60%, rgba(255,150,40,.32), transparent 66%); animation: hw-flicker 3.2s linear infinite; }
+.hw-face { animation: hw-flicker 3.2s linear infinite; }
+.hw-pumpkin.is-small .hw-face, .hw-pumpkin.is-small .hw-pumpkin-glow { animation-delay: -1.4s; }
+.droid-hat { display: none; position: absolute; left: 21%; top: -27%; width: 58%; transform: rotate(-9deg); pointer-events: none; }
+.theme-halloween .droid-hat { display: block; }
+
+/* Held still: no motion, and only the three bats parked around the moon. */
+.fx-lite .hw-layer *, .fx-lite .hw-layer *::before { animation: none !important; }
+.fx-lite .hw-bat:nth-child(n+4) { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .hw-layer *, .hw-layer *::before { animation: none !important; }
+  .hw-bat:nth-child(n+4) { display: none; }
+}
+
+/* Footer: the Halloween switch beside the Effects switch; orange when on, dimmed when off. */
+.footer-switches { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+.hw-toggle[aria-checked="false"] .fx-toggle-track i { background: var(--faint); box-shadow: none; }
+.hw-toggle[aria-checked="true"] .fx-toggle-track { background: rgba(255,140,26,.26); }
+.hw-toggle[aria-checked="true"] .fx-toggle-track i { transform: translateX(.9rem); background: #ff8c1a; box-shadow: 0 0 .55rem rgba(255,140,26,.65); }
+
+@media (max-width: 760px) {
+  .footer-switches { flex-direction: column; align-items: flex-start; }
+  .hw-spider { display: none; }
+  .hw-pumpkin { width: 46px; }
+  .hw-pumpkin.is-small { width: 32px; }
+}
+
+@keyframes hw-fly {
+  0% { transform: translate(-8vw, calc(var(--y) + 4vh)); }
+  15% { transform: translate(14vw, calc(var(--y) - 3vh)); }
+  30% { transform: translate(36vw, calc(var(--y) + 5vh)); }
+  45% { transform: translate(58vw, calc(var(--y) - 2vh)); }
+  60% { transform: translate(80vw, calc(var(--y) + 4vh)); }
+  72%, 100% { transform: translate(108vw, calc(var(--y) - 3vh)); }
+}
+@keyframes hw-flap { to { transform: scaleY(.35); } }
+@keyframes hw-dangle { to { transform: translateY(64px); } }
+@keyframes hw-drift { to { transform: translateX(-50%); } }
+@keyframes hw-flicker { 0%, 100% { opacity: 1; } 8% { opacity: .76; } 14% { opacity: .95; } 22% { opacity: .68; } 30% { opacity: 1; } 55% { opacity: .84; } 62% { opacity: 1; } 80% { opacity: .78; } 86% { opacity: .96; } }

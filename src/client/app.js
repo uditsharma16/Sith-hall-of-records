@@ -322,7 +322,7 @@ function drawHyperspaceFrame(motion, alpha) {
     const cos = Math.cos(p.angle), sin = Math.sin(p.angle);
     const streakAlpha = Math.min(1, accel * 1.8) * (.55 + p.hue * .45) * alpha;
     if (streakAlpha <= .01) continue;
-    const color = p.hue > .82 ? "201,162,77" : p.hue > .5 ? "155,89,182" : "225,222,245";
+    const color = p.hue > .82 ? (halloween.on ? "255,140,26" : "201,162,77") : p.hue > .5 ? "155,89,182" : "225,222,245";
     hctx.strokeStyle = `rgba(${color},${streakAlpha.toFixed(3)})`;
     hctx.lineWidth = p.width * (.5 + accelClamped * 1.4);
     hctx.beginPath();
@@ -438,7 +438,8 @@ function droidReact(line) {
   droid.classList.remove("startled");
   void droid.offsetWidth; // restart the animation even on rapid re-triggers
   droid.classList.add("startled");
-  showDroidBubble(line || DROID_QUIPS[Math.floor(Math.random() * DROID_QUIPS.length)]);
+  const quips = halloween.on && Math.random() < .7 ? HW_QUIPS : DROID_QUIPS;
+  showDroidBubble(line || quips[Math.floor(Math.random() * quips.length)]);
 }
 function droidLimits() {
   const droid = byId("droid");
@@ -1284,6 +1285,91 @@ function watchFrameRate() {
   requestAnimationFrame(tick);
 }
 
+/* ───────── Seasonal wrapper: Halloween ─────────
+ * A purely decorative layer over the normal site — a harvest moon, a corner web
+ * with a dangling spider, bats, low fog, jack-o'-lanterns, ember-coloured motes,
+ * pumpkin-orange accents and a witch hat for the droid. Page content is never
+ * touched. It follows the Full/Lite effects mode: Full animates it, Lite (and
+ * reduced motion) holds the same scene still, so the performance guard still
+ * protects slow devices. Visitors can switch it off from the footer (remembered).
+ * Site-wide off: set HALLOWEEN.enabled to false. It also retires itself on
+ * HALLOWEEN.until so it never lingers past the season. */
+const HALLOWEEN = { enabled: true, until: "2026-11-02" };
+const HW_PREF = "tso-halloween";
+const halloween = { on: false, built: false, recolorMotes: null };
+const HW_MOTES = ["255,140,26", "255,179,71", "123,211,76", "155,89,182", "232,225,213"];
+const HW_QUIPS = [
+  "Trick or treat. I accept holocrons only.",
+  "Scanning for ghosts. Many detected. All Sith.",
+  "This archive is haunted. I have filed a complaint.",
+  "Boo. Droids do not get scared. Probably.",
+  "I hid a holocron inside a pumpkin. Somewhere.",
+  "My costume this year: a slightly spookier droid.",
+];
+const HW_BAT = `<svg viewBox="0 0 64 28"><path d="M32 11C30 7 28 6 26 6c1 2 1 3 0 4-4-3-11-5-20-3 4 2 5 5 4 8 4-1 7 0 9 3 2-2 5-2 7 0l6 6 6-6c2-2 5-2 7 0 2-3 5-4 9-3-1-3 0-6 4-8-9-2-16 0-20 3-1-1-1-2 0-4-2 0-4 1-6 5z"/></svg>`;
+const HW_SPIDER = `<svg class="hw-spider-body" viewBox="0 0 40 40"><path d="M16 18 8 10 4 14M16 20 6 18 2 24M16 22 8 26 6 33M17 24 12 30 12 37M24 18 32 10 36 14M24 20 34 18 38 24M24 22 32 26 34 33M23 24 28 30 28 37" fill="none" stroke="#5a4668" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="20" cy="22" rx="6" ry="7" fill="#4a3758"/><circle cx="20" cy="13.5" r="4" fill="#4a3758"/><circle cx="18.6" cy="13" r="1" fill="#ff8c1a"/><circle cx="21.4" cy="13" r="1" fill="#ff8c1a"/></svg>`;
+const HW_PUMPKIN = `<svg viewBox="0 0 100 92"><path d="M47 22c0-9 3-14 9-17l4 4c-5 2-7 7-7 13z" fill="#4c7a2a"/><ellipse cx="29" cy="56" rx="24" ry="32" fill="#c6550c"/><ellipse cx="71" cy="56" rx="24" ry="32" fill="#c6550c"/><ellipse cx="50" cy="56" rx="27" ry="35" fill="#ec7416"/><g class="hw-face" fill="#ffd36a"><path d="M29 47l10-13 9 13z"/><path d="M52 47l9-13 10 13z"/><path d="M47 55l3-7 3 7z"/><path d="M25 61Q50 70 75 61Q71 80 50 82Q29 80 25 61z"/></g><path d="M38 64l4 7 4-6zM54 66l4 6 4-7z" fill="#ec7416"/></svg>`;
+
+function halloweenInSeason() {
+  return HALLOWEEN.enabled && Date.now() < new Date(`${HALLOWEEN.until}T00:00:00`).getTime();
+}
+/* A corner web anchored at the top-left of the viewport: spokes fanning out
+ * from the corner, joined by rings that sag slightly toward it. */
+function hwWeb() {
+  const spokes = [0, 15, 30, 45, 60, 75, 90].map((deg) => (deg * Math.PI) / 180);
+  const at = (r, a) => `${(r * Math.cos(a)).toFixed(1)} ${(r * Math.sin(a)).toFixed(1)}`;
+  let d = spokes.map((a) => `M0 0L${at(220, a)}`).join("");
+  for (const r of [34, 70, 108, 150, 196]) {
+    for (let i = 0; i < spokes.length - 1; i += 1) d += `M${at(r, spokes[i])}Q${at(r * .86, (spokes[i] + spokes[i + 1]) / 2)} ${at(r, spokes[i + 1])}`;
+  }
+  return `<svg class="hw-web" viewBox="0 0 220 220"><path d="${d}"/></svg>`;
+}
+function buildHalloween() {
+  if (halloween.built) return;
+  halloween.built = true;
+  // sx/sy: where each bat hangs around the moon when the scene is held still (Lite / reduced motion).
+  const bats = [
+    { w: 38, y: "10vh", dur: 24, delay: -3, sx: "88vw", sy: "calc(9vh + 2vw)" }, // silhouetted against the moon
+    { w: 26, y: "22vh", dur: 31, delay: -14, sx: "81vw", sy: "7vh", back: true },
+    { w: 32, y: "15vh", dur: 27, delay: -20, sx: "72vw", sy: "19vh" },
+    { w: 22, y: "30vh", dur: 35, delay: -8, sx: "0", sy: "0", back: true },
+    { w: 28, y: "6vh", dur: 29, delay: -25, sx: "0", sy: "0" },
+  ];
+  byId("hwLayer").innerHTML = `
+    <div class="hw-moon"></div>
+    ${hwWeb()}
+    <div class="hw-spider"><i class="hw-thread"></i>${HW_SPIDER}</div>
+    <div class="hw-bats">${bats.map((b) => `<div class="hw-bat${b.back ? " is-back" : ""}" style="--w:${b.w}px;--y:${b.y};--dur:${b.dur}s;--delay:${b.delay}s;--sx:${b.sx};--sy:${b.sy}">${HW_BAT}</div>`).join("")}</div>
+    <div class="hw-fog hw-fog-a"></div><div class="hw-fog hw-fog-b"></div>
+    <div class="hw-pumpkins"><div class="hw-pumpkin"><i class="hw-pumpkin-glow"></i>${HW_PUMPKIN}</div><div class="hw-pumpkin is-small"><i class="hw-pumpkin-glow"></i>${HW_PUMPKIN}</div></div>`;
+}
+function setHalloween(on) {
+  halloween.on = on;
+  if (on) buildHalloween();
+  document.documentElement.classList.toggle("theme-halloween", on);
+  byId("hwLayer").hidden = !on;
+  byId("hwToggle").setAttribute("aria-checked", String(on));
+  byId("hwToggleState").textContent = on ? "On" : "Off";
+  halloween.recolorMotes?.();
+}
+function initHalloween() {
+  if (!halloweenInSeason()) return;
+  byId("hwToggle").hidden = false;
+  let pref = null;
+  try { pref = localStorage.getItem(HW_PREF); } catch {}
+  setHalloween(pref === "on");
+  if (!halloween.on) return;
+  try {
+    if (sessionStorage.getItem("tso-hw-greeted")) return;
+    sessionStorage.setItem("tso-hw-greeted", "1");
+  } catch {}
+  setTimeout(() => { if (halloween.on) showDroidBubble("Happy Halloween from the Order."); }, 2600);
+}
+function toggleHalloween() {
+  setHalloween(!halloween.on);
+  try { localStorage.setItem(HW_PREF, halloween.on ? "on" : "off"); } catch {}
+}
+
 function createAtmosphere() {
   if (reducedMotion.matches) return;
   let frame = 0;
@@ -1302,7 +1388,9 @@ function createAtmosphere() {
   if (!context) return;
   const colors = ["155,89,182", "111,63,160", "201,162,77", "232,225,213", "91,42,130"];
   let width = 0, height = 0, motes = [], running = true, looping = false;
-  const spawn = (anywhere) => ({ x: Math.random() * width, y: anywhere ? Math.random() * height : height + 10, size: .7 + Math.random() * 1.9, speed: .1 + Math.random() * .4, sway: Math.random() * Math.PI * 2, swaySpeed: .003 + Math.random() * .01, alpha: .18 + Math.random() * .42, color: colors[Math.floor(Math.random() * colors.length)] });
+  const pickColor = () => { const palette = halloween.on ? HW_MOTES : colors; return palette[Math.floor(Math.random() * palette.length)]; };
+  const spawn = (anywhere) => ({ x: Math.random() * width, y: anywhere ? Math.random() * height : height + 10, size: .7 + Math.random() * 1.9, speed: .1 + Math.random() * .4, sway: Math.random() * Math.PI * 2, swaySpeed: .003 + Math.random() * .01, alpha: .18 + Math.random() * .42, color: pickColor() });
+  halloween.recolorMotes = () => { for (const mote of motes) mote.color = pickColor(); };
   const resize = () => {
     const ratio = Math.min(devicePixelRatio || 1, 2);
     width = innerWidth; height = innerHeight;
@@ -1468,6 +1556,7 @@ byId("sectionsButton").addEventListener("click", () => { const open = byId("sect
 byId("searchTrigger").addEventListener("click", () => openSearch());
 byId("randomButton").addEventListener("click", jumpToRandomRecord);
 byId("fxToggle").addEventListener("click", toggleFxMode);
+byId("hwToggle").addEventListener("click", toggleHalloween);
 byId("closeSearch").addEventListener("click", closeSearch);
 byId("globalSearch").addEventListener("input", (event) => renderSearch(event.target.value));
 byId("globalSearch").addEventListener("keydown", (event) => {
@@ -1482,6 +1571,7 @@ document.addEventListener("keydown", (event) => {
 });
 window.addEventListener(PREVIEW ? "hashchange" : "popstate", () => route());
 applyChosenFxMode();
+initHalloween();
 createAtmosphere();
 initDroid();
 start();
