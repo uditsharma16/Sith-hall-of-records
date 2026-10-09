@@ -1312,7 +1312,18 @@ function watchFrameRate() {
 const HALLOWEEN = { enabled: true, until: "2026-11-02" };
 const HW_PREF = "tso-halloween";
 const halloween = { on: false, built: false, recolorMotes: null };
-const HW_MOTES = ["255,140,26", "255,179,71", "123,211,76", "155,89,182", "232,225,213"];
+const HW_MOTES = ["95,211,90", "150,245,120", "190,255,150", "255,140,26", "155,89,182"];
+const HW_GHOST = `<svg viewBox="0 0 64 76"><path d="M4 44q-4 4-1 9 3-3 7-4zM60 44q4 4 1 9-3-3-7-4z" fill="#dff0e0"/><path d="M32 3C16 3 8 15 8 31v35q4 7 8 0 4-7 8 0 4 7 8 0 4-7 8 0 4 7 8 0 4-7 8 0V31C56 15 48 3 32 3z" fill="#eef8ee"/><path d="M44 8c6 4 9 11 9 21v34" fill="none" stroke="#cfe4d1" stroke-width="3" stroke-linecap="round"/><ellipse cx="24" cy="30" rx="4" ry="5.6" fill="#16201a"/><ellipse cx="40" cy="30" rx="4" ry="5.6" fill="#16201a"/><circle cx="25.4" cy="28" r="1.4" fill="#fff"/><circle cx="41.4" cy="28" r="1.4" fill="#fff"/><ellipse cx="32" cy="43" rx="3.6" ry="4.6" fill="#16201a"/><circle cx="16.5" cy="38.5" r="3.4" fill="rgba(255,140,170,.45)"/><circle cx="47.5" cy="38.5" r="3.4" fill="rgba(255,140,170,.45)"/></svg>`;
+const HW_GRAVEYARD = `<svg class="hw-graveyard" viewBox="0 0 1440 140" preserveAspectRatio="xMidYMax slice">
+  <path class="hw-iron" stroke-width="5" d="M1300 112C1302 84 1296 62 1290 40M1292 58C1276 48 1268 42 1254 34M1294 50C1310 38 1322 32 1338 28M1290 40C1288 28 1292 18 1300 8M1264 39 1250 26M1326 31 1336 16"/>
+  <path class="hw-iron" stroke-width="4" d="M604 106V76M626 104V72M648 105V78M670 103V70M692 106V75M714 104V73M736 105V79M758 103V71M780 106V76M598 86H786M598 98H786"/>
+  <path class="hw-stone" d="M214 114V80q0-17 18-17t18 17v34z"/>
+  <path class="hw-stone" d="M326 114V72h-10v-9h10V52h9v11h10v9h-10v42z"/>
+  <path class="hw-stone" transform="rotate(-8 480 100)" d="M466 114V84q0-13 14-13t14 13v30z"/>
+  <path class="hw-stone" d="M990 112V66q0-22 24-22t24 22v46z"/><text x="1014" y="84" text-anchor="middle">RIP</text>
+  <path class="hw-stone" transform="rotate(6 1150 96)" d="M1140 106V86q0-9 10-9t10 9v20z"/>
+  <path class="hw-ground" d="M0 140V110q120-16 260-4t300-6 320 6 300-10 260 8v36z"/>
+</svg>`;
 const HW_BAT = `<svg viewBox="0 0 64 28"><path d="M32 11C30 7 28 6 26 6c1 2 1 3 0 4-4-3-11-5-20-3 4 2 5 5 4 8 4-1 7 0 9 3 2-2 5-2 7 0l6 6 6-6c2-2 5-2 7 0 2-3 5-4 9-3-1-3 0-6 4-8-9-2-16 0-20 3-1-1-1-2 0-4-2 0-4 1-6 5z"/></svg>`;
 const HW_SPIDER = `<svg class="hw-spider-body" viewBox="0 0 40 40"><path d="M16 18 8 10 4 14M16 20 6 18 2 24M16 22 8 26 6 33M17 24 12 30 12 37M24 18 32 10 36 14M24 20 34 18 38 24M24 22 32 26 34 33M23 24 28 30 28 37" fill="none" stroke="#5a4668" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="20" cy="22" rx="6" ry="7" fill="#4a3758"/><circle cx="20" cy="13.5" r="4" fill="#4a3758"/><circle cx="18.6" cy="13" r="1" fill="#ff8c1a"/><circle cx="21.4" cy="13" r="1" fill="#ff8c1a"/></svg>`;
 const HW_PUMPKIN = `<svg viewBox="0 0 100 92"><path d="M47 22c0-9 3-14 9-17l4 4c-5 2-7 7-7 13z" fill="#4c7a2a"/><ellipse cx="29" cy="56" rx="24" ry="32" fill="#c6550c"/><ellipse cx="71" cy="56" rx="24" ry="32" fill="#c6550c"/><ellipse cx="50" cy="56" rx="27" ry="35" fill="#ec7416"/><g class="hw-face" fill="#ffd36a"><path d="M29 47l10-13 9 13z"/><path d="M52 47l9-13 10 13z"/><path d="M47 55l3-7 3 7z"/><path d="M25 61Q50 70 75 61Q71 80 50 82Q29 80 25 61z"/></g><path d="M38 64l4 7 4-6zM54 66l4 6 4-7z" fill="#ec7416"/></svg>`;
@@ -1342,12 +1353,29 @@ function buildHalloween() {
     { w: 22, y: "30vh", dur: 35, delay: -8, sx: "0", sy: "0", back: true },
     { w: 28, y: "6vh", dur: 29, delay: -25, sx: "0", sy: "0" },
   ];
+  // Ghosts drift between A (ax/ay) and B (bx/by); sx/sy is where each waits when held still.
+  const ghosts = [
+    { size: 70, ax: "3vw", ay: "60vh", bx: "9vw", by: "30vh", sx: "5vw", sy: "38vh", dur: 16, delay: -4 },
+    { size: 58, ax: "88vw", ay: "34vh", bx: "79vw", by: "58vh", sx: "86vw", sy: "44vh", dur: 19, delay: -9 },
+    { size: 46, ax: "26vw", ay: "16vh", bx: "60vw", by: "10vh", sx: "47vw", sy: "11vh", dur: 24, delay: -12, wide: true },
+    { size: 40, ax: "16vw", ay: "80vh", bx: "66vw", by: "72vh", sx: "0", sy: "0", dur: 28, delay: -18, roamer: true, wide: true },
+  ];
+  const eyes = [
+    { at: "left:21vw;bottom:4.5vh", eye: 6, gap: 7, blink: 6, delay: -1 },
+    { at: "right:33vw;bottom:7vh", eye: 5, gap: 6, blink: 8, delay: -5, wide: true },
+    { at: "right:2.2vw;top:30vh", eye: 7, gap: 8, blink: 7, delay: -3 },
+  ];
   byId("hwLayer").innerHTML = `
     <div class="hw-moon"></div>
     ${hwWeb()}
     <div class="hw-spider"><i class="hw-thread"></i>${HW_SPIDER}</div>
     <div class="hw-bats">${bats.map((b) => `<div class="hw-bat${b.back ? " is-back" : ""}" style="--w:${b.w}px;--y:${b.y};--dur:${b.dur}s;--delay:${b.delay}s;--sx:${b.sx};--sy:${b.sy}">${HW_BAT}</div>`).join("")}</div>
+    <div class="hw-ghosts">${ghosts.map((g) => `<div class="hw-ghost${g.roamer ? " is-roamer" : ""}${g.wide ? " is-wide" : ""}" style="--size:${g.size}px;--sx:${g.sx};--sy:${g.sy};--ax:${g.ax};--ay:${g.ay};--bx:${g.bx};--by:${g.by};--dur:${g.dur}s;--delay:${g.delay}s"><div class="hw-ghost-bob">${HW_GHOST}</div></div>`).join("")}</div>
+    <div class="hw-ghost-peek">${HW_GHOST}</div>
+    <div class="hw-graveyard-glow"></div>
     <div class="hw-fog hw-fog-a"></div><div class="hw-fog hw-fog-b"></div>
+    ${HW_GRAVEYARD}
+    ${eyes.map((e) => `<div class="hw-eyes${e.wide ? " is-wide" : ""}" style="${e.at};--eye:${e.eye}px;--gap:${e.gap}px;--blink:${e.blink}s;--delay:${e.delay}s"><i></i><i></i></div>`).join("")}
     <div class="hw-pumpkins"><div class="hw-pumpkin"><i class="hw-pumpkin-glow"></i>${HW_PUMPKIN}</div><div class="hw-pumpkin is-small"><i class="hw-pumpkin-glow"></i>${HW_PUMPKIN}</div></div>`;
 }
 function setHalloween(on) {
