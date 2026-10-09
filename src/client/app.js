@@ -415,31 +415,47 @@ function jumpToRandomRecord() {
  * (see state.live handling above). On larger screens it quietly patrols the
  * viewport perimeter; pointer events make it draggable with mouse or touch. */
 const DROID_QUIPS = [
-  "Scanning for rebel activity.",
-  "This signal originates from a Sith temple.",
-  "Beep. Boop. Holocron located.",
-  "No lifeforms detected. Only records.",
-  "Transmitting coordinates to the Emperor.",
-  "Careful. Some holocrons bite back.",
-  "I have catalogued worse archives than this.",
-  "Do not touch the artefacts. I am watching.",
+  "Force Storm shares a name with a natural phenomenon found on Tython.",
+  "Sorzus Syn didn’t only make the Muur Talisman; she also made the Dreypa Talisman and the Syn Talisman.",
+  "Force Scream could be used to explain why 2/4 Jedi Masters just stood there when Palpatine attacked the arresting party.",
+  "Malachor V was once a fertile planet; until Darth Revan’s Mass Shadow Generator destroyed it.",
+  "There is no Kamino in the Galaxy. 🗣️",
+  "Xanatos of Telos is named after Lady Mania’s cat.",
+  "Darth Zannah is NOT the hottest Sith Lord. Darth Jar Jar is!",
+  "Rakghouls are Darth Penthos’ least favourite Sithspawn.",
+  "Although there is little known about Life-bonding, to tie one’s mind to another in such a sense is equivalent to marriage.",
+  "Before Obi-Wan Kenobi, Qui-Gon Jinn had two padawans: Feemor and Xanatos of Telos.",
+  "Vader’s castle was redesigned a total of eight times.",
+  "Terentateks are one of the few Sithspawn that were created by the Sith species prior to the arrival of the Jen’jidai.",
+  "Former Sith Lord hadji640 was the greediest of the Dread Masters. RIP",
+  "Lord Commandant koolhero164 was the first person awarded with Regent’s Recognition.",
+  "During October 2025, the average age of the Dread Council was 23. Uncs",
+  "The best cloning technology was owned by the Kaminoans.",
+  "The basis of Force cloak is believed to be taught by the Neti due to their natural ability to blend into the Force.",
 ];
 let droidBubbleTimer;
+let lastDroidQuip = -1;
 const droidMotion = { x: 0, y: 0, pointerId: null, offsetX: 0, offsetY: 0, startX: 0, startY: 0, dragged: false, suppressClick: false, patrolIndex: 0, patrolTimer: 0, resumeTimer: 0 };
 function showDroidBubble(text) {
   const bubble = byId("droidBubble");
   bubble.textContent = text;
   bubble.classList.add("show");
   clearTimeout(droidBubbleTimer);
-  droidBubbleTimer = setTimeout(() => bubble.classList.remove("show"), 2600);
+  // Long lines stay up long enough to read (about 60ms a character), within 2.6–10s.
+  droidBubbleTimer = setTimeout(() => bubble.classList.remove("show"), Math.min(10000, Math.max(2600, text.length * 60)));
 }
 function droidReact(line) {
   const droid = byId("droid");
   droid.classList.remove("startled");
   void droid.offsetWidth; // restart the animation even on rapid re-triggers
   droid.classList.add("startled");
-  const quips = halloween.on && Math.random() < .7 ? HW_QUIPS : DROID_QUIPS;
-  showDroidBubble(line || quips[Math.floor(Math.random() * quips.length)]);
+  if (line) return showDroidBubble(line);
+  if (halloween.on && Math.random() < .7) return showDroidBubble(HW_QUIPS[Math.floor(Math.random() * HW_QUIPS.length)]);
+  // Never the same line twice in a row.
+  let pick = Math.floor(Math.random() * (DROID_QUIPS.length - 1));
+  if (pick >= lastDroidQuip && lastDroidQuip >= 0) pick += 1;
+  lastDroidQuip = pick;
+  showDroidBubble(DROID_QUIPS[pick]);
 }
 function droidLimits() {
   const droid = byId("droid");
