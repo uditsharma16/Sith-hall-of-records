@@ -450,7 +450,6 @@ function droidReact(line) {
   void droid.offsetWidth; // restart the animation even on rapid re-triggers
   droid.classList.add("startled");
   if (line) return showDroidBubble(line);
-  if (halloween.on && Math.random() < .7) return showDroidBubble(HW_QUIPS[Math.floor(Math.random() * HW_QUIPS.length)]);
   // Never the same line twice in a row.
   let pick = Math.floor(Math.random() * (DROID_QUIPS.length - 1));
   if (pick >= lastDroidQuip && lastDroidQuip >= 0) pick += 1;
@@ -1314,14 +1313,6 @@ const HALLOWEEN = { enabled: true, until: "2026-11-02" };
 const HW_PREF = "tso-halloween";
 const halloween = { on: false, built: false, recolorMotes: null };
 const HW_MOTES = ["255,140,26", "255,179,71", "123,211,76", "155,89,182", "232,225,213"];
-const HW_QUIPS = [
-  "Trick or treat. I accept holocrons only.",
-  "Scanning for ghosts. Many detected. All Sith.",
-  "This archive is haunted. I have filed a complaint.",
-  "Boo. Droids do not get scared. Probably.",
-  "I hid a holocron inside a pumpkin. Somewhere.",
-  "My costume this year: a slightly spookier droid.",
-];
 const HW_BAT = `<svg viewBox="0 0 64 28"><path d="M32 11C30 7 28 6 26 6c1 2 1 3 0 4-4-3-11-5-20-3 4 2 5 5 4 8 4-1 7 0 9 3 2-2 5-2 7 0l6 6 6-6c2-2 5-2 7 0 2-3 5-4 9-3-1-3 0-6 4-8-9-2-16 0-20 3-1-1-1-2 0-4-2 0-4 1-6 5z"/></svg>`;
 const HW_SPIDER = `<svg class="hw-spider-body" viewBox="0 0 40 40"><path d="M16 18 8 10 4 14M16 20 6 18 2 24M16 22 8 26 6 33M17 24 12 30 12 37M24 18 32 10 36 14M24 20 34 18 38 24M24 22 32 26 34 33M23 24 28 30 28 37" fill="none" stroke="#5a4668" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="20" cy="22" rx="6" ry="7" fill="#4a3758"/><circle cx="20" cy="13.5" r="4" fill="#4a3758"/><circle cx="18.6" cy="13" r="1" fill="#ff8c1a"/><circle cx="21.4" cy="13" r="1" fill="#ff8c1a"/></svg>`;
 const HW_PUMPKIN = `<svg viewBox="0 0 100 92"><path d="M47 22c0-9 3-14 9-17l4 4c-5 2-7 7-7 13z" fill="#4c7a2a"/><ellipse cx="29" cy="56" rx="24" ry="32" fill="#c6550c"/><ellipse cx="71" cy="56" rx="24" ry="32" fill="#c6550c"/><ellipse cx="50" cy="56" rx="27" ry="35" fill="#ec7416"/><g class="hw-face" fill="#ffd36a"><path d="M29 47l10-13 9 13z"/><path d="M52 47l9-13 10 13z"/><path d="M47 55l3-7 3 7z"/><path d="M25 61Q50 70 75 61Q71 80 50 82Q29 80 25 61z"/></g><path d="M38 64l4 7 4-6zM54 66l4 6 4-7z" fill="#ec7416"/></svg>`;
