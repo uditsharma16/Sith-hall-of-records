@@ -1392,7 +1392,7 @@ function initHalloween() {
   byId("hwToggle").hidden = false;
   let pref = null;
   try { pref = localStorage.getItem(HW_PREF); } catch {}
-  setHalloween(pref === "on");
+  setHalloween(pref !== "off"); // on unless this visitor switched it off
   if (!halloween.on) return;
   try {
     if (sessionStorage.getItem("tso-hw-greeted")) return;
