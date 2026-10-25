@@ -963,17 +963,19 @@ const LEADERSHIP_NAV = { crumb: [{ href: link("/"), label: "Network" }, { href: 
  * (list.pos) still decides everything else — this only promotes whichever
  * groups match these names, in this order, and leaves the rest exactly
  * where the board already has them. */
-/* Titles like "Hand of the Emperor" and "Voice of the Emperor" contain the
- * word "emperor" too, so the more specific offices are matched first —
+/* Titles like "Hand of the Emperor", "Voice of the Emperor" or a "Shield of
+ * the Emperor" contain the word "emperor" too, so the more specific offices
+ * are matched first —
  * otherwise they'd all collapse onto the Emperor's own rank. The numbers
  * are the desired DISPLAY order, independent of match order. */
 const LEADERSHIP_OFFICES = [
+  { match: "shields?", rank: 5 },
   { match: "hand", rank: 2 },
   { match: "voice", rank: 3 },
   { match: "wrath", rank: 4 },
   { match: "regent", rank: 1 },
   { match: "emperor", rank: 0 },
-  { match: "dark honor guard", rank: 5 }
+  { match: "dark honor guard", rank: 6 }
 ];
 function leadershipPriorityRank(name = "") {
   const normalised = name.toLowerCase();
